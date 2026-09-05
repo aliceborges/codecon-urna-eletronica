@@ -4,6 +4,12 @@
 <div class="page-head">
   <h1>Urnas</h1>
   <div class="spacer"></div>
+  <form method="post" action="/admin/apuracao/resetar"
+        onsubmit="return confirm('Resetar a apuração de TODAS as urnas? Apaga todos os boletins recebidos. Esta ação não pode ser desfeita.')">
+    <button class="btn danger" type="submit"{% if total_boletins == 0 %} disabled{% endif %}>
+      Resetar apuração ({{ total_boletins }})
+    </button>
+  </form>
   <a class="btn" href="/admin/urnas/nova">+ Nova urna</a>
 </div>
 
@@ -15,6 +21,7 @@
     <tr>
       <th>Nome / Local</th>
       <th>Chave pública</th>
+      <th>Apuração</th>
       <th style="text-align:right">Ações</th>
     </tr>
   </thead>
@@ -23,6 +30,13 @@
     <tr>
       <td>{{ u.nome }}</td>
       <td><code>{{ u.chave_publica }}</code></td>
+      <td>
+        {% if u.tem_boletim %}
+          <span class="pill" style="background:#f0fdf4;color:#166534">✔ {{ u.votos }} votos</span>
+        {% else %}
+          <span class="muted">— sem boletim</span>
+        {% endif %}
+      </td>
       <td>
         <div class="actions" style="justify-content:flex-end">
           <a class="btn small" href="/admin/urnas/{{ u.id }}/carga">Exportar carga</a>

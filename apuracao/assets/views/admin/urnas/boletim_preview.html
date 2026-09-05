@@ -32,22 +32,25 @@
     </div>
   {% endif %}
 
-  <h2 style="font-size:16px;margin-top:18px">Votos por número</h2>
-  <table>
-    <thead><tr><th>Número</th><th>Votos</th></tr></thead>
-    <tbody>
-      {% for t in tally %}
-      <tr><td><span class="pill">{{ t.numero }}</span></td><td>{{ t.votos }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <form method="post" action="/admin/urnas/{{ urna.id }}/boletim/aceitar" style="margin-top:18px">
-    <input type="hidden" name="encrypted" value="{{ encrypted }}">
-    <div class="actions">
-      <button class="btn" type="submit">Aceitar boletim</button>
-      <a class="btn ghost" href="/admin/urnas/{{ urna.id }}/boletim">Cancelar</a>
+  {% if ja_recebido %}
+    <div class="alert" style="margin-top:18px">
+      Esta urna já teve um boletim recebido — cada urna aceita apenas uma apuração.
     </div>
-  </form>
+    <div class="actions"><a class="btn ghost" href="/admin/urnas/{{ urna.id }}/boletim">Voltar</a></div>
+  {% elif hash_confere %}
+    <form method="post" action="/admin/urnas/{{ urna.id }}/boletim/aceitar" style="margin-top:18px">
+      <input type="hidden" name="encrypted" value="{{ encrypted }}">
+      <input type="hidden" name="hash" value="{{ hash_arquivo }}">
+      <div class="actions">
+        <button class="btn" type="submit">Aceitar boletim</button>
+        <a class="btn ghost" href="/admin/urnas/{{ urna.id }}/boletim">Cancelar</a>
+      </div>
+    </form>
+  {% else %}
+    <div class="alert" style="margin-top:18px">
+      Importação bloqueada: o hash não confere (ou o arquivo não trouxe hash). Este boletim não pode ser aceito.
+    </div>
+    <div class="actions"><a class="btn ghost" href="/admin/urnas/{{ urna.id }}/boletim">Voltar</a></div>
+  {% endif %}
 </div>
 {% endblock %}

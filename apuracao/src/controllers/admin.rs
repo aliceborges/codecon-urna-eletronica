@@ -46,14 +46,24 @@ async fn dashboard(
 ) -> Result<Response> {
     let total_candidatos = candidatos::Entity::find().all(&ctx.db).await?.len();
     let total_urnas = urnas::Entity::find().all(&ctx.db).await?.len();
+    let total_boletins = poll_reports::Entity::find().all(&ctx.db).await?.len();
     format::view(
         &v,
         "admin/dashboard.html",
         data!({
             "total_candidatos": total_candidatos,
             "total_urnas": total_urnas,
+            "total_boletins": total_boletins,
         }),
     )
+}
+
+/// Limpa TODAS as apurações recebidas (boletins), liberando as urnas para
+/// receber novamente. Usado para refazer a demo do zero.
+#[debug_handler]
+async fn apuracao_resetar(State(ctx): State<AppContext>) -> Result<Response> {
+    poll_reports::Entity::delete_many().exec(&ctx.db).await?;
+    format::redirect("/admin")
 }
 
 // ----------------------------------------------------------------- candidatos
@@ -200,7 +210,33 @@ async fn urnas_list(
         .order_by_asc(urnas::Column::Nome)
         .all(&ctx.db)
         .await?;
-    format::view(&v, "admin/urnas/list.html", data!({ "urnas": items }))
+
+    // total de votos importados por urna (no máximo um boletim por urna)
+    let boletins = poll_reports::Entity::find().all(&ctx.db).await?;
+    let mut votos_por_urna: std::collections::HashMap<i64, i64> = std::collections::HashMap::new();
+    for b in &boletins {
+        votos_por_urna.insert(b.urna_id, b.total);
+    }
+
+    let urnas_view: Vec<serde_json::Value> = items
+        .iter()
+        .map(|u| {
+            let votos = votos_por_urna.get(&u.id).copied();
+            serde_json::json!({
+                "id": u.id,
+                "nome": u.nome,
+                "chave_publica": u.chave_publica,
+                "tem_boletim": votos.is_some(),
+                "votos": votos,
+            })
+        })
+        .collect();
+
+    format::view(
+        &v,
+        "admin/urnas/list.html",
+        data!({ "urnas": urnas_view, "total_boletins": boletins.len() }),
+    )
 }
 
 #[debug_handler]
@@ -502,6 +538,13 @@ async fn urnas_boletim_preview(
         })
         .unwrap_or_default();
 
+    // uma apuração por urna: se já houver boletim recebido, não permite aceitar de novo
+    let ja_recebido = poll_reports::Entity::find()
+        .filter(poll_reports::Column::UrnaId.eq(urna.id))
+        .one(&ctx.db)
+        .await?
+        .is_some();
+
     format::view(
         &v,
         "admin/urnas/boletim_preview.html",
@@ -514,6 +557,7 @@ async fn urnas_boletim_preview(
             "hash_calculado": hash_calculado,
             "hash_arquivo": hash_arquivo,
             "hash_confere": hash_confere,
+            "ja_recebido": ja_recebido,
         }),
     )
 }
@@ -521,6 +565,7 @@ async fn urnas_boletim_preview(
 #[derive(Debug, Deserialize)]
 struct BoletimAceitarForm {
     encrypted: String,
+    hash: String,
 }
 
 #[debug_handler]
@@ -533,6 +578,22 @@ async fn urnas_boletim_aceitar(
     let Some(urna) = urnas::Entity::find_by_id(id).one(&ctx.db).await? else {
         return not_found();
     };
+
+    // uma apuração por urna: recusa um segundo boletim
+    let ja_recebido = poll_reports::Entity::find()
+        .filter(poll_reports::Column::UrnaId.eq(urna.id))
+        .one(&ctx.db)
+        .await?
+        .is_some();
+    if ja_recebido {
+        return render_boletim_page(
+            &v,
+            &ctx,
+            &urna,
+            Some("Esta urna já teve um boletim recebido. Cada urna aceita apenas uma apuração.".to_string()),
+        )
+        .await;
+    }
 
     // redecifra no servidor (não confiamos em dados já decifrados vindos do cliente)
     let plaintext = match crypto::decrypt_with_code(&urna.chave_publica, &form.encrypted) {
@@ -550,6 +611,18 @@ async fn urnas_boletim_aceitar(
     };
 
     let hash = crypto::sha256_hex(crypto::stable_stringify(&report).as_bytes());
+
+    // hash inválido ou ausente NÃO importa
+    if form.hash.trim().is_empty() || form.hash.trim() != hash {
+        return render_boletim_page(
+            &v,
+            &ctx,
+            &urna,
+            Some("Hash inválido — importação recusada. O conteúdo não corresponde ao hash informado no arquivo.".to_string()),
+        )
+        .await;
+    }
+
     let terminal_id = report
         .get("terminal_id")
         .and_then(serde_json::Value::as_str)
@@ -587,6 +660,7 @@ pub fn routes() -> Routes {
     Routes::new()
         .prefix("/admin")
         .add("/", get(dashboard))
+        .add("/apuracao/resetar", post(apuracao_resetar))
         // candidatos
         .add("/candidatos", get(candidatos_list))
         .add("/candidatos/novo", get(candidatos_new))
