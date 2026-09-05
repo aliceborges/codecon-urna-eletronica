@@ -58,6 +58,12 @@
     .svg-thumb { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px;
                  background: #fff; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
     .svg-thumb svg, .svg-thumb img { width: 100%; height: 100%; object-fit: contain; }
+    /* No admin, SVG animado é sempre exibido no primeiro quadro (sem animação). */
+    .svg-thumb svg, .svg-thumb svg * {
+      animation-play-state: paused !important;
+      animation-delay: 0s !important;
+      transition: none !important;
+    }
     .muted { color: var(--muted); }
     .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3;
             font-weight: 700; font-size: 13px; }
@@ -81,5 +87,18 @@
   <main>
     {% block content %}{% endblock %}
   </main>
+  <script>
+    // Congela SVGs no primeiro quadro no admin: pausa animações SMIL em t=0.
+    // (Animações CSS já ficam paradas pela regra em .svg-thumb.)
+    window.congelarSvgs = function (root) {
+      (root || document).querySelectorAll('.svg-thumb svg').forEach(function (svg) {
+        try {
+          if (typeof svg.setCurrentTime === 'function') svg.setCurrentTime(0);
+          if (typeof svg.pauseAnimations === 'function') svg.pauseAnimations();
+        } catch (e) { /* ignora */ }
+      });
+    };
+    document.addEventListener('DOMContentLoaded', function () { window.congelarSvgs(document); });
+  </script>
 </body>
 </html>

@@ -5,7 +5,27 @@ use loco_rs::prelude::*;
 use sea_orm::QueryOrder;
 use serde::Deserialize;
 
+use crate::crypto;
 use crate::models::_entities::{candidatos, urnas};
+
+/// Monta o objeto `candidates.json` no schema acordado com a urna
+/// (`number, name, party, photo, name_vice, photo_vice`).
+fn build_candidates_json(items: &[candidatos::Model]) -> serde_json::Value {
+    let cands: Vec<serde_json::Value> = items
+        .iter()
+        .map(|c| {
+            serde_json::json!({
+                "number": c.numero,
+                "name": c.nome,
+                "party": c.partido,
+                "photo": c.foto_svg.clone().unwrap_or_default(),
+                "name_vice": c.nome_vice,
+                "photo_vice": c.foto_vice_svg.clone().unwrap_or_default(),
+            })
+        })
+        .collect();
+    serde_json::json!({ "candidates": cands })
+}
 
 /// Converte string vazia (campo de formulário em branco) em `None`.
 fn blank_to_none(s: String) -> Option<String> {
@@ -26,14 +46,24 @@ async fn dashboard(
 ) -> Result<Response> {
     let total_candidatos = candidatos::Entity::find().all(&ctx.db).await?.len();
     let total_urnas = urnas::Entity::find().all(&ctx.db).await?.len();
+    let total_boletins = poll_reports::Entity::find().all(&ctx.db).await?.len();
     format::view(
         &v,
         "admin/dashboard.html",
         data!({
             "total_candidatos": total_candidatos,
             "total_urnas": total_urnas,
+            "total_boletins": total_boletins,
         }),
     )
+}
+
+/// Limpa TODAS as apurações recebidas (boletins), liberando as urnas para
+/// receber novamente. Usado para refazer a demo do zero.
+#[debug_handler]
+async fn apuracao_resetar(State(ctx): State<AppContext>) -> Result<Response> {
+    poll_reports::Entity::delete_many().exec(&ctx.db).await?;
+    format::redirect("/admin")
 }
 
 // ----------------------------------------------------------------- candidatos
@@ -57,7 +87,11 @@ async fn candidatos_list(
         .order_by_asc(candidatos::Column::Numero)
         .all(&ctx.db)
         .await?;
-    format::view(&v, "admin/candidatos/list.html", data!({ "candidatos": items }))
+    format::view(
+        &v,
+        "admin/candidatos/list.html",
+        data!({ "candidatos": items }),
+    )
 }
 
 #[debug_handler]
@@ -152,10 +186,7 @@ async fn candidatos_update(
 }
 
 #[debug_handler]
-async fn candidatos_delete(
-    State(ctx): State<AppContext>,
-    Path(id): Path<i64>,
-) -> Result<Response> {
+async fn candidatos_delete(State(ctx): State<AppContext>, Path(id): Path<i64>) -> Result<Response> {
     if let Some(model) = candidatos::Entity::find_by_id(id).one(&ctx.db).await? {
         model.into_active_model().delete(&ctx.db).await?;
     }
@@ -179,7 +210,33 @@ async fn urnas_list(
         .order_by_asc(urnas::Column::Nome)
         .all(&ctx.db)
         .await?;
-    format::view(&v, "admin/urnas/list.html", data!({ "urnas": items }))
+
+    // total de votos importados por urna (no máximo um boletim por urna)
+    let boletins = poll_reports::Entity::find().all(&ctx.db).await?;
+    let mut votos_por_urna: std::collections::HashMap<i64, i64> = std::collections::HashMap::new();
+    for b in &boletins {
+        votos_por_urna.insert(b.urna_id, b.total);
+    }
+
+    let urnas_view: Vec<serde_json::Value> = items
+        .iter()
+        .map(|u| {
+            let votos = votos_por_urna.get(&u.id).copied();
+            serde_json::json!({
+                "id": u.id,
+                "nome": u.nome,
+                "chave_publica": u.chave_publica,
+                "tem_boletim": votos.is_some(),
+                "votos": votos,
+            })
+        })
+        .collect();
+
+    format::view(
+        &v,
+        "admin/urnas/list.html",
+        data!({ "urnas": urnas_view, "total_boletins": boletins.len() }),
+    )
 }
 
 #[debug_handler]
@@ -265,12 +322,345 @@ async fn urnas_delete(State(ctx): State<AppContext>, Path(id): Path<i64>) -> Res
     format::redirect("/admin/urnas")
 }
 
+// ------------------------------------------------------------ exportar carga
+
+#[debug_handler]
+async fn urnas_carga(
+    ViewEngine(v): ViewEngine<TeraView>,
+    State(ctx): State<AppContext>,
+    Path(id): Path<i64>,
+) -> Result<Response> {
+    let Some(urna) = urnas::Entity::find_by_id(id).one(&ctx.db).await? else {
+        return not_found();
+    };
+    let items = candidatos::Entity::find()
+        .order_by_asc(candidatos::Column::Numero)
+        .all(&ctx.db)
+        .await?;
+    let canonical = crypto::stable_stringify(&build_candidates_json(&items));
+    let hash = crypto::sha256_hex(canonical.as_bytes());
+    format::view(
+        &v,
+        "admin/urnas/carga.html",
+        data!({ "urna": urna, "total": items.len(), "hash": hash }),
+    )
+}
+
+#[debug_handler]
+async fn urnas_carga_download(
+    State(ctx): State<AppContext>,
+    Path(id): Path<i64>,
+) -> Result<Response> {
+    let Some(urna) = urnas::Entity::find_by_id(id).one(&ctx.db).await? else {
+        return not_found();
+    };
+    let items = candidatos::Entity::find()
+        .order_by_asc(candidatos::Column::Numero)
+        .all(&ctx.db)
+        .await?;
+    let canonical = crypto::stable_stringify(&build_candidates_json(&items));
+    let hash = crypto::sha256_hex(canonical.as_bytes());
+    let encrypted = crypto::encrypt_with_code(&urna.chave_publica, &canonical)
+        .map_err(|e| Error::string(&e))?;
+
+    // Importante: a chave de 6 dígitos NÃO vai no arquivo (nem no nome dele) — ela é a
+    // própria chave de descriptografia; expô-la aqui anularia a criptografia.
+    let body = serde_json::to_string_pretty(&serde_json::json!({
+        "urna": urna.nome,
+        "encrypted": encrypted,
+        "hash": hash,
+    }))
+    .map_err(|e| Error::string(&e.to_string()))?;
+
+    let filename = format!("candidates-urna-{}.enc.json", urna.id);
+    Ok((
+        [
+            (
+                axum::http::header::CONTENT_TYPE,
+                "application/json; charset=utf-8".to_string(),
+            ),
+            (
+                axum::http::header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{filename}\""),
+            ),
+        ],
+        body,
+    )
+        .into_response())
+}
+
+#[debug_handler]
+async fn urnas_carga_preview(
+    State(ctx): State<AppContext>,
+    Path(id): Path<i64>,
+) -> Result<Response> {
+    let Some(_urna) = urnas::Entity::find_by_id(id).one(&ctx.db).await? else {
+        return not_found();
+    };
+    let items = candidatos::Entity::find()
+        .order_by_asc(candidatos::Column::Numero)
+        .all(&ctx.db)
+        .await?;
+    let obj = build_candidates_json(&items);
+    let hash = crypto::sha256_hex(crypto::stable_stringify(&obj).as_bytes());
+
+    // Texto puro (sem criptografia), só para validação/inspeção: expõe o mesmo
+    // objeto que é criptografado mais o hash canônico, para conferir a olho.
+    let body = serde_json::to_string_pretty(&serde_json::json!({
+        "hash": hash,
+        "candidates": obj["candidates"],
+    }))
+    .map_err(|e| Error::string(&e.to_string()))?;
+
+    Ok((
+        [(
+            axum::http::header::CONTENT_TYPE,
+            "application/json; charset=utf-8".to_string(),
+        )],
+        body,
+    )
+        .into_response())
+}
+
+// ----------------------------------------------------- receber poll_report
+
+use crate::models::_entities::poll_reports;
+
+/// Extrai o base64 criptografado (e o hash, se houver) do conteúdo do arquivo
+/// enviado. Aceita tanto o envelope `{ "encrypted": ..., "hash": ... }` quanto
+/// o próprio base64 cru.
+fn extrair_encrypted(texto: &str) -> Result<(String, Option<String>), String> {
+    let t = texto.trim();
+    if let Ok(v) = serde_json::from_str::<serde_json::Value>(t) {
+        if let Some(enc) = v.get("encrypted").and_then(serde_json::Value::as_str) {
+            let hash = v
+                .get("hash")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string);
+            return Ok((enc.to_string(), hash));
+        }
+        return Err("arquivo JSON sem o campo 'encrypted'".to_string());
+    }
+    // não é JSON: tratar o conteúdo como o base64 cru
+    Ok((t.to_string(), None))
+}
+
+async fn render_boletim_page(
+    v: &TeraView,
+    ctx: &AppContext,
+    urna: &urnas::Model,
+    error: Option<String>,
+) -> Result<Response> {
+    let recebidos = poll_reports::Entity::find()
+        .filter(poll_reports::Column::UrnaId.eq(urna.id))
+        .order_by_desc(poll_reports::Column::Id)
+        .all(&ctx.db)
+        .await?;
+    format::view(
+        v,
+        "admin/urnas/boletim.html",
+        data!({ "urna": urna, "recebidos": recebidos, "error": error }),
+    )
+}
+
+#[debug_handler]
+async fn urnas_boletim(
+    ViewEngine(v): ViewEngine<TeraView>,
+    State(ctx): State<AppContext>,
+    Path(id): Path<i64>,
+) -> Result<Response> {
+    let Some(urna) = urnas::Entity::find_by_id(id).one(&ctx.db).await? else {
+        return not_found();
+    };
+    render_boletim_page(&v, &ctx, &urna, None).await
+}
+
+#[debug_handler]
+async fn urnas_boletim_preview(
+    ViewEngine(v): ViewEngine<TeraView>,
+    State(ctx): State<AppContext>,
+    Path(id): Path<i64>,
+    mut multipart: Multipart,
+) -> Result<Response> {
+    let Some(urna) = urnas::Entity::find_by_id(id).one(&ctx.db).await? else {
+        return not_found();
+    };
+
+    // lê o arquivo enviado (campo "arquivo")
+    let mut conteudo = String::new();
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| Error::string(&e.to_string()))?
+    {
+        if field.name() == Some("arquivo") {
+            let bytes = field.bytes().await.map_err(|e| Error::string(&e.to_string()))?;
+            conteudo = String::from_utf8_lossy(&bytes).to_string();
+        }
+    }
+    if conteudo.trim().is_empty() {
+        return render_boletim_page(&v, &ctx, &urna, Some("Selecione um arquivo.".to_string())).await;
+    }
+
+    let (encrypted, hash_arquivo) = match extrair_encrypted(&conteudo) {
+        Ok(x) => x,
+        Err(e) => return render_boletim_page(&v, &ctx, &urna, Some(e)).await,
+    };
+
+    // descriptografa com a chave (6 dígitos) que cadastramos para esta urna
+    let plaintext = match crypto::decrypt_with_code(&urna.chave_publica, &encrypted) {
+        Ok(p) => p,
+        Err(e) => return render_boletim_page(&v, &ctx, &urna, Some(e)).await,
+    };
+    let Ok(report) = serde_json::from_str::<serde_json::Value>(&plaintext) else {
+        return render_boletim_page(
+            &v,
+            &ctx,
+            &urna,
+            Some("O conteúdo decifrado não é um JSON válido.".to_string()),
+        )
+        .await;
+    };
+
+    let hash_calculado = crypto::sha256_hex(crypto::stable_stringify(&report).as_bytes());
+    let hash_confere = hash_arquivo.as_ref().map(|h| h == &hash_calculado);
+
+    // dados para exibição
+    let terminal_id = report.get("terminal_id").and_then(serde_json::Value::as_str);
+    let total = report.get("total").and_then(serde_json::Value::as_i64);
+    let tally: Vec<serde_json::Value> = report
+        .get("tally")
+        .and_then(serde_json::Value::as_object)
+        .map(|m| {
+            m.iter()
+                .map(|(numero, votos)| serde_json::json!({ "numero": numero, "votos": votos }))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    // uma apuração por urna: se já houver boletim recebido, não permite aceitar de novo
+    let ja_recebido = poll_reports::Entity::find()
+        .filter(poll_reports::Column::UrnaId.eq(urna.id))
+        .one(&ctx.db)
+        .await?
+        .is_some();
+
+    format::view(
+        &v,
+        "admin/urnas/boletim_preview.html",
+        data!({
+            "urna": urna,
+            "encrypted": encrypted,
+            "terminal_id": terminal_id,
+            "total": total,
+            "tally": tally,
+            "hash_calculado": hash_calculado,
+            "hash_arquivo": hash_arquivo,
+            "hash_confere": hash_confere,
+            "ja_recebido": ja_recebido,
+        }),
+    )
+}
+
+#[derive(Debug, Deserialize)]
+struct BoletimAceitarForm {
+    encrypted: String,
+    hash: String,
+}
+
+#[debug_handler]
+async fn urnas_boletim_aceitar(
+    ViewEngine(v): ViewEngine<TeraView>,
+    State(ctx): State<AppContext>,
+    Path(id): Path<i64>,
+    Form(form): Form<BoletimAceitarForm>,
+) -> Result<Response> {
+    let Some(urna) = urnas::Entity::find_by_id(id).one(&ctx.db).await? else {
+        return not_found();
+    };
+
+    // uma apuração por urna: recusa um segundo boletim
+    let ja_recebido = poll_reports::Entity::find()
+        .filter(poll_reports::Column::UrnaId.eq(urna.id))
+        .one(&ctx.db)
+        .await?
+        .is_some();
+    if ja_recebido {
+        return render_boletim_page(
+            &v,
+            &ctx,
+            &urna,
+            Some("Esta urna já teve um boletim recebido. Cada urna aceita apenas uma apuração.".to_string()),
+        )
+        .await;
+    }
+
+    // redecifra no servidor (não confiamos em dados já decifrados vindos do cliente)
+    let plaintext = match crypto::decrypt_with_code(&urna.chave_publica, &form.encrypted) {
+        Ok(p) => p,
+        Err(e) => return render_boletim_page(&v, &ctx, &urna, Some(e)).await,
+    };
+    let Ok(report) = serde_json::from_str::<serde_json::Value>(&plaintext) else {
+        return render_boletim_page(
+            &v,
+            &ctx,
+            &urna,
+            Some("O conteúdo decifrado não é um JSON válido.".to_string()),
+        )
+        .await;
+    };
+
+    let hash = crypto::sha256_hex(crypto::stable_stringify(&report).as_bytes());
+
+    // hash inválido ou ausente NÃO importa
+    if form.hash.trim().is_empty() || form.hash.trim() != hash {
+        return render_boletim_page(
+            &v,
+            &ctx,
+            &urna,
+            Some("Hash inválido — importação recusada. O conteúdo não corresponde ao hash informado no arquivo.".to_string()),
+        )
+        .await;
+    }
+
+    let terminal_id = report
+        .get("terminal_id")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string);
+    let total = report
+        .get("total")
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or(0);
+    let tally_json = report
+        .get("tally")
+        .map(std::string::ToString::to_string)
+        .unwrap_or_else(|| "{}".to_string());
+    let issued_at = report
+        .get("issued_at")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string);
+
+    let item = poll_reports::ActiveModel {
+        urna_id: Set(urna.id),
+        terminal_id: Set(terminal_id),
+        total: Set(total),
+        tally_json: Set(tally_json),
+        hash: Set(hash),
+        issued_at: Set(issued_at),
+        ..Default::default()
+    };
+    item.insert(&ctx.db).await?;
+
+    format::redirect(&format!("/admin/urnas/{id}/boletim"))
+}
+
 // --------------------------------------------------------------------- routes
 
 pub fn routes() -> Routes {
     Routes::new()
         .prefix("/admin")
         .add("/", get(dashboard))
+        .add("/apuracao/resetar", post(apuracao_resetar))
         // candidatos
         .add("/candidatos", get(candidatos_list))
         .add("/candidatos/novo", get(candidatos_new))
@@ -285,4 +675,10 @@ pub fn routes() -> Routes {
         .add("/urnas/{id}/editar", get(urnas_edit))
         .add("/urnas/{id}", post(urnas_update))
         .add("/urnas/{id}/excluir", post(urnas_delete))
+        .add("/urnas/{id}/carga", get(urnas_carga))
+        .add("/urnas/{id}/carga/download", get(urnas_carga_download))
+        .add("/urnas/{id}/carga/preview", get(urnas_carga_preview))
+        .add("/urnas/{id}/boletim", get(urnas_boletim))
+        .add("/urnas/{id}/boletim/preview", post(urnas_boletim_preview))
+        .add("/urnas/{id}/boletim/aceitar", post(urnas_boletim_aceitar))
 }

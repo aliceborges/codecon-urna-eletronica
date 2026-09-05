@@ -5,7 +5,7 @@
   <h1>Painel da apuração</h1>
 </div>
 
-<div class="cards">
+<div class="cards" style="grid-template-columns:repeat(3,1fr)">
   <a class="stat" href="/admin/candidatos" style="text-decoration:none;color:inherit">
     <div class="n">{{ total_candidatos }}</div>
     <div class="l">Candidatos cadastrados</div>
@@ -14,6 +14,10 @@
     <div class="n">{{ total_urnas }}</div>
     <div class="l">Urnas cadastradas</div>
   </a>
+  <div class="stat">
+    <div class="n">{{ total_boletins }}</div>
+    <div class="l">Boletins recebidos</div>
+  </div>
 </div>
 
 <div class="card">
@@ -26,5 +30,19 @@
     <a class="btn" href="/admin/candidatos/novo">+ Novo candidato</a>
     <a class="btn ghost" href="/admin/urnas/nova">+ Nova urna</a>
   </div>
+</div>
+
+<div class="card" style="margin-top:16px;border-color:#fecaca">
+  <h2 style="font-size:16px;margin:0 0 6px">Resetar apuração</h2>
+  <p class="muted" style="margin-top:0">
+    Remove <strong>todos os boletins recebidos</strong> ({{ total_boletins }}) e libera as urnas
+    para receber novamente. Não mexe em candidatos nem em urnas.
+  </p>
+  <form method="post" action="/admin/apuracao/resetar"
+        onsubmit="return confirm('Apagar todos os boletins recebidos? Esta ação não pode ser desfeita.')">
+    <button class="btn danger" type="submit"{% if total_boletins == 0 %} disabled{% endif %}>
+      Resetar apuração
+    </button>
+  </form>
 </div>
 {% endblock %}
