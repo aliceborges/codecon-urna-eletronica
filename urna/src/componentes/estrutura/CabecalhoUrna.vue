@@ -1,13 +1,13 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    titulo: string
-    status?: string
+    titulo: string;
+    status?: string;
   }>(),
   {
-    status: 'Terminal 01',
+    status: "Terminal 01",
   },
-)
+);
 </script>
 
 <template>
@@ -16,12 +16,5 @@ withDefaults(
       <p>Justiça Eleitoral</p>
       <strong>{{ titulo }}</strong>
     </div>
-
-    <slot name="acao">
-      <div class="status-terminal">
-        <span class="indicador-status" aria-hidden="true"></span>
-        {{ status }}
-      </div>
-    </slot>
   </header>
 </template>

@@ -139,18 +139,6 @@ button {
   letter-spacing: -0.02em;
 }
 
-.status-terminal {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  color: var(--texto-suave);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .indicador-status {
   width: 8px;
   height: 8px;
@@ -175,7 +163,10 @@ button {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    background 150ms ease;
 }
 
 .botao-exportar-cabecalho:hover {
@@ -871,7 +862,9 @@ h1 {
   background: #f8faf8;
   cursor: pointer;
   text-align: center;
-  transition: border-color 150ms ease, background 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
 }
 
 .area-arquivo:hover,
@@ -937,8 +930,15 @@ h1 {
   outline: 0;
   color: var(--texto);
   background: #fff;
-  font: 0.76rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  font:
+    0.76rem ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .campo-hash input:focus {
@@ -959,7 +959,9 @@ h1 {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: filter 150ms ease, opacity 150ms ease;
+  transition:
+    filter 150ms ease,
+    opacity 150ms ease;
 }
 
 .botao-validar-arquivo:hover:not(:disabled) {
@@ -1050,7 +1052,10 @@ h1 {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: filter 150ms ease, opacity 150ms ease, transform 150ms ease;
+  transition:
+    filter 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
 }
 
 .botao-iniciar-votacao:hover:not(:disabled) {
@@ -1228,7 +1233,9 @@ h1 {
   background: #fff;
   font-size: 0.86rem;
   font-weight: 600;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .campo-terminal input:focus {
@@ -1259,7 +1266,10 @@ h1 {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: filter 150ms ease, transform 150ms ease, opacity 150ms ease;
+  transition:
+    filter 150ms ease,
+    transform 150ms ease,
+    opacity 150ms ease;
 }
 
 .botao-gerar-boletim:hover:not(:disabled) {
@@ -1339,7 +1349,12 @@ h1 {
 .hash-exportacao code {
   overflow-wrap: anywhere;
   color: var(--texto);
-  font: 0.68rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font:
+    0.68rem/1.55 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
 }
 
 .hash-exportacao button {
@@ -1449,11 +1464,19 @@ h1 {
   padding: clamp(28px, 6vw, 64px);
   border-top: 1px solid var(--linha);
   background:
-    radial-gradient(circle at 50% 45%, rgba(12, 121, 87, 0.1), transparent 18rem),
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(12, 121, 87, 0.1),
+      transparent 18rem
+    ),
     linear-gradient(rgba(48, 69, 59, 0.025) 1px, transparent 1px),
     linear-gradient(90deg, rgba(48, 69, 59, 0.025) 1px, transparent 1px),
     var(--tela);
-  background-size: auto, 24px 24px, 24px 24px, auto;
+  background-size:
+    auto,
+    24px 24px,
+    24px 24px,
+    auto;
   text-align: center;
 }
 
@@ -1545,7 +1568,9 @@ h1 {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: filter 150ms ease, transform 150ms ease;
+  transition:
+    filter 150ms ease,
+    transform 150ms ease;
 }
 
 .botao-proximo-eleitor:hover {
@@ -1774,10 +1799,6 @@ h1 {
   .cabecalho-urna {
     min-height: 74px;
     padding: 14px 16px;
-  }
-
-  .status-terminal {
-    font-size: 0;
   }
 
   .botao-exportar-cabecalho {
