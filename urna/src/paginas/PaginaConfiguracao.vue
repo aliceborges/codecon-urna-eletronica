@@ -16,7 +16,7 @@ import { reiniciarSessaoVotacao } from '../estado/sessaoVotacao'
 import type { EnvelopeArquivoCandidatos } from '../tipos/urna'
 
 const router = useRouter()
-const codigoPublico = ref('------')
+const codigoUrna = ref('------')
 const estaGerandoCodigo = ref(true)
 const cargaCriptografada = ref('')
 const hashEsperado = ref('')
@@ -37,7 +37,7 @@ const podeIniciarVotacao = computed(() => candidatosProntos.value && !estaImport
 onMounted(async () => {
   try {
     const urna = await inicializarUrna()
-    codigoPublico.value = urna.codigoPublico
+    codigoUrna.value = urna.codigo
     candidatosProntos.value = obterCandidatos().length > 0
 
     if (candidatosProntos.value) {
@@ -144,7 +144,7 @@ function iniciarVotacao() {
             este terminal.
           </p>
 
-          <CartaoCodigoUrna :codigo-publico="codigoPublico" :esta-gerando="estaGerandoCodigo" />
+          <CartaoCodigoUrna :codigo-publico="codigoUrna" :esta-gerando="estaGerandoCodigo" />
         </section>
 
         <CartaoArquivoCandidatos
@@ -167,6 +167,6 @@ function iniciarVotacao() {
       />
     </section>
 
-    <AvisoPrivacidade texto="Chaves e arquivos permanecem armazenados somente neste terminal." />
+    <AvisoPrivacidade texto="Código e arquivos permanecem armazenados somente neste terminal." />
   </main>
 </template>

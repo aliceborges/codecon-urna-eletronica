@@ -2,10 +2,10 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  completeVotingSession,
-  lastVoteType,
-  resetVotingSession,
-} from '../state/votingSession'
+  concluirSessaoVotacao as completeVotingSession,
+  reiniciarSessaoVotacao as resetVotingSession,
+  ultimoTipoVoto as lastVoteType,
+} from '../estado/sessaoVotacao'
 
 const props = defineProps<{
   screen: 'setup' | 'voting' | 'success'
@@ -23,7 +23,7 @@ type Candidate = {
 }
 
 type UrnaKeys = {
-  publicId: string
+  code: string
 }
 
 type CandidateImportResult = {
@@ -50,17 +50,12 @@ type UrnaLogic = {
   ) => Promise<CandidateImportResult>
 }
 
-declare global {
-  interface Window {
-    UrnaFrontendLogic?: UrnaLogic
-  }
-}
-
 const keypadNumbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+const numberOfDigits = 3
 
 const voteNumber = ref('')
 const candidates = ref<Candidate[]>([])
-const publicId = ref('------')
+const urnCode = ref('------')
 const isGeneratingCode = ref(true)
 const encryptedPayload = ref('')
 const expectedHash = ref('')
@@ -70,7 +65,7 @@ const candidatesReady = ref(false)
 const importMessage = ref('')
 const importError = ref('')
 
-const publicIdDigits = computed(() => publicId.value.padEnd(6, '-').slice(0, 6).split(''))
+const urnCodeDigits = computed(() => urnCode.value.padEnd(6, '-').slice(0, 6).split(''))
 const canValidateFile = computed(
   () =>
     !isGeneratingCode.value &&
@@ -78,55 +73,29 @@ const canValidateFile = computed(
     /^[a-f\d]{64}$/i.test(expectedHash.value.trim()),
 )
 const canStartVoting = computed(() => candidatesReady.value && !isImporting.value)
-const numberOfDigits = computed(() => {
-  const largestNumber = candidates.value.reduce(
-    (largest, candidate) => Math.max(largest, String(candidate.number).length),
-    0,
-  )
-
-  return largestNumber || 3
-})
 const displayedDigits = computed(() =>
-  Array.from({ length: numberOfDigits.value }, (_, index) => voteNumber.value[index] ?? ''),
+  Array.from({ length: numberOfDigits }, (_, index) => voteNumber.value[index] ?? ''),
 )
 const selectedCandidate = computed(() => {
-  if (!voteNumber.value) return null
+  if (voteNumber.value.length !== numberOfDigits) return null
 
   return getUrnaLogic().inputNumber(voteNumber.value)
 })
-const numberIsComplete = computed(() => voteNumber.value.length === numberOfDigits.value)
+const numberIsComplete = computed(() => voteNumber.value.length === numberOfDigits)
 const candidateNotFound = computed(() => numberIsComplete.value && !selectedCandidate.value)
 const canConfirmCandidate = computed(() => Boolean(selectedCandidate.value))
 const candidatePhotoIsSvg = computed(() =>
   selectedCandidate.value?.photo?.trim().startsWith('<svg') ?? false,
 )
-const runningMate = computed(() => {
-  const cand = selectedCandidate.value
-  if (!cand) return null
-
-  // Prefer explicit name_vice when provided
-  if (cand.name_vice) {
-    return {
-      name: cand.name_vice.trim() || 'Vice não informado',
-      party: ''
-    }
-  }
-
-  // Backwards compatibility: parse legacy CSV encoded in photo_vice
-  const rawValue = cand.photo_vice?.trim()
-  if (!rawValue || rawValue.startsWith('<svg')) return null
-  const [name] = rawValue.split(',')
-  return {
-    name: name?.trim() || 'Vice não informado',
-    party: ''
-  }
-})
+const runningMatePhotoIsSvg = computed(() =>
+  selectedCandidate.value?.photo_vice?.trim().startsWith('<svg') ?? false,
+)
 
 onMounted(async () => {
   try {
     const logic = getUrnaLogic()
     const keys = await logic.initIfNeeded()
-    publicId.value = keys.publicId
+    urnCode.value = keys.code
     candidates.value = logic.getCandidates().candidates ?? []
     candidatesReady.value = Boolean(candidates.value.length)
 
@@ -148,7 +117,7 @@ function getUrnaLogic(): UrnaLogic {
     throw new Error('A lógica de provisionamento da urna não foi carregada.')
   }
 
-  return window.UrnaFrontendLogic
+  return window.UrnaFrontendLogic as UrnaLogic
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -236,7 +205,7 @@ function finishVote(type: 'candidate' | 'blank') {
   const voteKey = type === 'blank' ? 'blank' : voteNumber.value
 
   getUrnaLogic().confirmVote(voteKey)
-  completeVotingSession(type)
+  completeVotingSession(type === 'blank' ? 'branco' : 'candidato')
   void router.push({ name: 'success' })
 }
 
@@ -247,7 +216,7 @@ function prepareNextVoter() {
 }
 
 function inputDigit(digit: string) {
-  if (voteNumber.value.length >= numberOfDigits.value) return
+  if (voteNumber.value.length >= numberOfDigits) return
 
   voteNumber.value += digit
 }
@@ -304,8 +273,8 @@ function handlePhysicalKeyboard(event: KeyboardEvent) {
               </span>
             </div>
 
-            <div class="terminal-code" :aria-label="`Código da urna: ${publicId}`">
-              <span v-for="(digit, index) in publicIdDigits" :key="`${digit}-${index}`">
+            <div class="terminal-code" :aria-label="`Código da urna: ${urnCode}`">
+              <span v-for="(digit, index) in urnCodeDigits" :key="`${digit}-${index}`">
                 {{ digit }}
               </span>
             </div>
@@ -389,7 +358,7 @@ function handlePhysicalKeyboard(event: KeyboardEvent) {
 
     <p class="privacy-note">
       <span aria-hidden="true">◆</span>
-      Chaves e arquivos permanecem armazenados somente neste terminal.
+      Código e arquivos permanecem armazenados somente neste terminal.
     </p>
   </main>
 
@@ -442,8 +411,8 @@ function handlePhysicalKeyboard(event: KeyboardEvent) {
                 <p class="candidate-party">
                   {{ selectedCandidate.party }} · Chapa {{ selectedCandidate.number }}
                 </p>
-                <p v-if="runningMate" class="candidate-running-mate">
-                  Vice: {{ runningMate.name }}<template v-if="runningMate.party"> · {{ runningMate.party }}</template>
+                <p v-if="selectedCandidate.name_vice" class="candidate-running-mate">
+                  Vice: {{ selectedCandidate.name_vice }}
                 </p>
               </div>
               <div v-else-if="candidateNotFound" class="candidate-details candidate-not-found" role="alert">
@@ -457,25 +426,46 @@ function handlePhysicalKeyboard(event: KeyboardEvent) {
             </div>
 
             <div class="candidate-media">
-              <figure v-if="selectedCandidate" class="candidate-card">
-                <div
-                  v-if="candidatePhotoIsSvg"
-                  class="candidate-photo candidate-photo-markup"
-                  role="img"
-                  :aria-label="`${selectedCandidate.name}, candidato a prefeito`"
-                  v-html="selectedCandidate.photo"
-                ></div>
-                <img
-                  v-else
-                  class="candidate-photo"
-                  :src="selectedCandidate.photo"
-                  :alt="`${selectedCandidate.name}, candidato a prefeito`"
-                />
-                <figcaption>
-                  <span>{{ selectedCandidate.number }}</span>
-                  <small>Prefeito</small>
-                </figcaption>
-              </figure>
+              <template v-if="selectedCandidate">
+                <figure class="candidate-card">
+                  <div
+                    v-if="candidatePhotoIsSvg"
+                    class="candidate-photo candidate-photo-markup"
+                    role="img"
+                    :aria-label="`${selectedCandidate.name}, candidato a prefeito`"
+                    v-html="selectedCandidate.photo"
+                  ></div>
+                  <img
+                    v-else
+                    class="candidate-photo"
+                    :src="selectedCandidate.photo"
+                    :alt="`${selectedCandidate.name}, candidato a prefeito`"
+                  />
+                  <figcaption>
+                    <span>{{ selectedCandidate.number }}</span>
+                    <small>Prefeito</small>
+                  </figcaption>
+                </figure>
+                <figure v-if="selectedCandidate.photo_vice" class="candidate-card">
+                  <div
+                    v-if="runningMatePhotoIsSvg"
+                    class="candidate-photo candidate-photo-markup"
+                    role="img"
+                    :aria-label="`${selectedCandidate.name_vice || 'Vice'}, candidato a vice-prefeito`"
+                    v-html="selectedCandidate.photo_vice"
+                  ></div>
+                  <img
+                    v-else
+                    class="candidate-photo"
+                    :src="selectedCandidate.photo_vice"
+                    :alt="`${selectedCandidate.name_vice || 'Vice'}, candidato a vice-prefeito`"
+                  />
+                  <figcaption>
+                    <span>{{ selectedCandidate.name_vice || 'Vice não informado' }}</span>
+                    <small>Vice-prefeito</small>
+                  </figcaption>
+                </figure>
+              </template>
               <div
                 v-else
                 class="candidate-photo-placeholder"
@@ -587,7 +577,7 @@ function handlePhysicalKeyboard(event: KeyboardEvent) {
           <h1 id="success-title">Voto confirmado</h1>
           <p class="success-description">
             {{
-              lastVoteType === 'blank'
+              lastVoteType === 'branco'
                 ? 'Seu voto em branco foi registrado com segurança.'
                 : 'Seu voto foi registrado com segurança.'
             }}

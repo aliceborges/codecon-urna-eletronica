@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const vm = require('vm');
 const assert = require('assert');
 const { webcrypto } = require('crypto');
@@ -10,8 +11,6 @@ function abToBase64(buf) {
 function base64ToAb(b64){
   return Buffer.from(b64, 'base64');
 }
-function textToAb(str){ return new TextEncoder().encode(str).buffer; }
-function abToText(buf){ return new TextDecoder().decode(buf); }
 function stableStringify(obj){
   if (obj === null || typeof obj !== 'object') return JSON.stringify(obj);
   if (Array.isArray(obj)) return '[' + obj.map(stableStringify).join(',') + ']';
@@ -19,47 +18,30 @@ function stableStringify(obj){
   return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(obj[k])).join(',') + '}';
 }
 
-function arrayBufferToPem(spkiBuffer, label){
-  const b64 = abToBase64(spkiBuffer);
-  const lines = b64.match(/.{1,64}/g).join('\n');
-  return `-----BEGIN ${label}-----\n${lines}\n-----END ${label}-----`;
-}
-function pemToArrayBuffer(pem){
-  const b64 = pem.replace(/-----.*?-----|\n|\r/g,'');
-  return base64ToAb(b64);
+async function keyFromCode(code){
+  const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(code)));
+  return crypto.subtle.importKey('raw', raw, {name:'AES-GCM'}, false, ['encrypt','decrypt']);
 }
 
-async function importPublicKeyFromPem(pem){
-  const ab = pemToArrayBuffer(pem);
-  return crypto.subtle.importKey('spki', ab, {name:'RSA-OAEP', hash:'SHA-256'}, true, ['encrypt']);
-}
-async function importPrivateKeyFromPem(pkcs8Pem){
-  const ab = pemToArrayBuffer(pkcs8Pem);
-  return crypto.subtle.importKey('pkcs8', ab, {name:'RSA-OAEP', hash:'SHA-256'}, true, ['decrypt']);
-}
-
-async function encryptWithPubPem(pem, plainText){
-  const rsaKey = await importPublicKeyFromPem(pem);
-  // generate AES key
-  const aesKey = await crypto.subtle.generateKey({name:'AES-GCM', length:256}, true, ['encrypt','decrypt']);
-  const rawAes = await crypto.subtle.exportKey('raw', aesKey);
+async function encryptWithCode(code, plainText){
+  const key = await keyFromCode(code);
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt({name:'AES-GCM', iv}, aesKey, new TextEncoder().encode(plainText));
-  const encryptedKey = await crypto.subtle.encrypt({name:'RSA-OAEP'}, rsaKey, rawAes);
-  const obj = {k: abToBase64(encryptedKey), iv: abToBase64(iv.buffer), d: abToBase64(ciphertext)};
+  const d = await crypto.subtle.encrypt(
+    {name:'AES-GCM', iv},
+    key,
+    new TextEncoder().encode(plainText)
+  );
+  const obj = {iv: abToBase64(iv.buffer), d: abToBase64(d)};
   return abToBase64(new TextEncoder().encode(JSON.stringify(obj)));
 }
-async function decryptWithPrivPem(pkcs8Pem, encryptedBase64){
-  const rsaPriv = await importPrivateKeyFromPem(pkcs8Pem);
+
+async function decryptWithCode(code, encryptedBase64){
+  const key = await keyFromCode(code);
   const jsonAb = base64ToAb(encryptedBase64);
   const jsonText = Buffer.from(jsonAb).toString();
   const obj = JSON.parse(jsonText);
-  const encryptedKeyAb = base64ToAb(obj.k);
-  const rawAes = await crypto.subtle.decrypt({name:'RSA-OAEP'}, rsaPriv, encryptedKeyAb);
   const iv = new Uint8Array(base64ToAb(obj.iv));
-  const cipherAb = base64ToAb(obj.d);
-  const aesKey = await crypto.subtle.importKey('raw', rawAes, {name:'AES-GCM'}, false, ['decrypt']);
-  const decrypted = await crypto.subtle.decrypt({name:'AES-GCM', iv}, aesKey, cipherAb);
+  const decrypted = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, base64ToAb(obj.d));
   return new TextDecoder().decode(decrypted);
 }
 
@@ -71,8 +53,9 @@ async function run(){
   // minimal localStorage polyfill for tests
   globalThis.localStorage = (function(){ const store = {}; return { getItem(k){ return Object.prototype.hasOwnProperty.call(store,k) ? store[k] : null; }, setItem(k,v){ store[k]=String(v); }, removeItem(k){ delete store[k]; } }; })();
   globalThis.window = { localStorage: globalThis.localStorage };
-  const code = fs.readFileSync('urna/logica/frontend-logic.js', 'utf8');
-  vm.runInThisContext(code, {filename:'frontend-logic.js'});
+  const sourcePath = path.join(__dirname, '..', 'urna', 'logica', 'frontend-logic.js');
+  const sourceCode = fs.readFileSync(sourcePath, 'utf8');
+  vm.runInThisContext(sourceCode, {filename:'frontend-logic.js'});
   const U = globalThis.window.UrnaFrontendLogic;
   assert(U, 'UrnaFrontendLogic should be loaded');
 
@@ -82,60 +65,86 @@ async function run(){
   assert.strictEqual(typeof h, 'string');
   assert.strictEqual(h.length, 64);
 
-  console.log('2) Testing key generation and 6-digit public id');
-  await U.initIfNeeded();
-  const keys = U.getStoredKeys();
-  assert(keys && keys.publicPem && keys.privPem && keys.publicId);
-  assert.strictEqual(keys.publicId.length, 6);
+  console.log('2) Testing generation and persistence of the 6-digit code');
+  localStorage.setItem('urna:keys', JSON.stringify({publicPem:'legacy'}));
+  localStorage.setItem('urna:candidates', JSON.stringify({candidates:[{number:'123'}]}));
+  const initialized = await U.initIfNeeded();
+  const code = U.getStoredCode();
+  assert(code && /^\d{6}$/.test(code));
+  assert.strictEqual(initialized.code, code);
+  assert.strictEqual((await U.initIfNeeded()).code, code, 'init should reuse the stored code');
+  assert.strictEqual(localStorage.getItem('urna:keys'), null, 'legacy RSA keys should not remain');
+  assert.deepStrictEqual(U.getCandidates().candidates, [], 'a new code should clear the old load');
 
-  console.log('3) Testing importEncryptedCandidates flow');
-  // generate apuracao key pair
-  const apPair = await crypto.subtle.generateKey(
-    {name:'RSA-OAEP', modulusLength:2048, publicExponent:new Uint8Array([1,0,1]), hash:'SHA-256'},
-    true,
-    ['encrypt','decrypt']
-  );
-  const apSpki = await crypto.subtle.exportKey('spki', apPair.publicKey);
-  const apPkcs8 = await crypto.subtle.exportKey('pkcs8', apPair.privateKey);
-  const apPubPem = arrayBufferToPem(apSpki, 'PUBLIC KEY');
-  const apPrivPem = arrayBufferToPem(apPkcs8, 'PRIVATE KEY');
-
-  const candidatesObj = { apuracao_public_key: apPubPem, candidates:[{number:'10', name:'Alice', party:'X', photo:'<svg/>', name_vice: 'NomeVice', photo_vice: '<svg/vice/>'}] };
+  console.log('3) Testing AES-GCM candidate import with the new schema');
+  const candidatesObj = {
+    candidates:[{
+      number:'123',
+      name:'Alice',
+      party:'X',
+      photo:'<svg></svg>',
+      name_vice:'Nome Vice',
+      photo_vice:'<svg><title>Vice</title></svg>'
+    }]
+  };
   const candidatesJson = stableStringify(candidatesObj);
   // compute hash using same stableStringify -> SHA-256 hex
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(candidatesJson));
   const expectedHashHex = Buffer.from(digest).toString('hex');
 
-  // encrypt the candidates JSON with the urn public key
-  const urnKeys = U.getStoredKeys();
-  const urnPubPem = urnKeys.publicPem;
-  const encrypted = await encryptWithPubPem(urnPubPem, candidatesJson);
+  const encrypted = await encryptWithCode(code, candidatesJson);
+  const envelope = JSON.parse(Buffer.from(base64ToAb(encrypted)).toString());
+  assert.deepStrictEqual(Object.keys(envelope).sort(), ['d', 'iv']);
+
+  const rejected = await U.importEncryptedCandidates(encrypted, '0'.repeat(64));
+  assert.strictEqual(rejected.ok, false, 'a divergent hash should reject the candidate load');
+  assert.deepStrictEqual(U.getCandidates().candidates, []);
 
   const res = await U.importEncryptedCandidates(encrypted, expectedHashHex);
   assert.strictEqual(res.ok, true, 'importEncryptedCandidates should succeed');
   // ensure vice fields passed through
   const importedCandidate = U.getCandidates().candidates[0];
-  assert.strictEqual(importedCandidate.name_vice, 'NomeVice');
-  assert.strictEqual(importedCandidate.photo_vice, '<svg/vice/>');
+  assert.strictEqual(importedCandidate.name_vice, 'Nome Vice');
+  assert.strictEqual(importedCandidate.photo_vice, '<svg><title>Vice</title></svg>');
+  assert.strictEqual('apuracao_public_key' in U.getCandidates(), false);
+
+  const invalidCandidates = {candidates:[{...candidatesObj.candidates[0], number:'12'}]};
+  const invalidCandidatesJson = stableStringify(invalidCandidates);
+  const invalidDigest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(invalidCandidatesJson)
+  );
+  const invalidEncrypted = await encryptWithCode(code, invalidCandidatesJson);
+  await assert.rejects(
+    () => U.importEncryptedCandidates(invalidEncrypted, Buffer.from(invalidDigest).toString('hex')),
+    /exatamente 3 dígitos/
+  );
 
   console.log('4) Testing vote flow and tally persistence');
-  const cand = U.inputNumber('10');
+  const cand = U.inputNumber('123');
   assert(cand && cand.name === 'Alice');
-  const tally1 = U.confirmVote('10');
-  assert.strictEqual(tally1['10'], 1);
-  const tally2 = U.confirmVote('10');
-  assert.strictEqual(tally2['10'], 2);
+  assert.strictEqual(U.inputNumber('12'), null);
+  assert.throws(() => U.confirmVote('12'), /3 dígitos/);
+  assert.throws(() => U.confirmVote('999'), /inválido/);
+  const tally1 = U.confirmVote('123');
+  assert.strictEqual(tally1['123'], 1);
+  const tally2 = U.confirmVote('123');
+  assert.strictEqual(tally2['123'], 2);
 
-  console.log('5) Testing exportPollReport and decrypt with apuracao private key');
+  console.log('5) Testing poll report export with the same 6-digit code');
   const out = await U.exportPollReport('terminal-test');
   assert(out && out.encrypted && out.hash && out.report);
-  // decrypt using apuracao private key
-  const decrypted = await decryptWithPrivPem(apPrivPem, out.encrypted);
+  const reportEnvelope = JSON.parse(Buffer.from(base64ToAb(out.encrypted)).toString());
+  assert.deepStrictEqual(Object.keys(reportEnvelope).sort(), ['d', 'iv']);
+  const decrypted = await decryptWithCode(code, out.encrypted);
   const parsed = JSON.parse(decrypted);
   assert.deepStrictEqual(parsed.tally, out.report.tally);
   // verify hash matches
   const computedHash = await U.hashJson(out.report);
   assert.strictEqual(computedHash, out.hash);
+
+  const wrongCode = String((Number(code) + 1) % 1000000).padStart(6, '0');
+  await assert.rejects(() => decryptWithCode(wrongCode, out.encrypted));
 
   console.log('All tests passed');
 }

@@ -44,6 +44,51 @@ button {
   font: inherit;
 }
 
+.status-pwa {
+  position: fixed;
+  z-index: 1000;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  display: flex;
+  max-width: min(420px, calc(100vw - 36px));
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: #fff;
+  background: #202824;
+  box-shadow: 0 14px 34px rgba(24, 33, 30, 0.24);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.status-pwa button {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #123125;
+  background: #70c8a6;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.status-pwa button:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.indicador-pwa {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #70c8a6;
+  box-shadow: 0 0 0 5px rgba(112, 200, 166, 0.14);
+}
+
 .estrutura-pagina {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
@@ -440,6 +485,12 @@ h1 {
   width: 100%;
   height: auto;
   aspect-ratio: 8 / 9;
+  object-fit: cover;
+}
+
+.foto-vice.foto-candidato-svg {
+  overflow: hidden;
+  background: #fff;
 }
 
 .cartao-vice figcaption {

@@ -8,29 +8,54 @@ const props = defineProps<{
 }>()
 
 const fotoEmSvg = computed(() => props.candidato?.foto?.trim().startsWith('<svg') ?? false)
+const fotoViceEmSvg = computed(
+  () => props.candidato?.fotoVice?.trim().startsWith('<svg') ?? false,
+)
 </script>
 
 <template>
   <div class="midia-candidato">
-    <figure v-if="candidato" class="cartao-candidato">
-      <div
-        v-if="fotoEmSvg"
-        class="foto-candidato foto-candidato-svg"
-        role="img"
-        :aria-label="`${candidato.nome}, candidato a prefeito`"
-        v-html="candidato.foto"
-      ></div>
-      <img
-        v-else
-        class="foto-candidato"
-        :src="candidato.foto"
-        :alt="`${candidato.nome}, candidato a prefeito`"
-      />
-      <figcaption>
-        <span>{{ candidato.numero }}</span>
-        <small>Prefeito</small>
-      </figcaption>
-    </figure>
+    <template v-if="candidato">
+      <figure class="cartao-candidato">
+        <div
+          v-if="fotoEmSvg"
+          class="foto-candidato foto-candidato-svg"
+          role="img"
+          :aria-label="`${candidato.nome}, candidato a prefeito`"
+          v-html="candidato.foto"
+        ></div>
+        <img
+          v-else
+          class="foto-candidato"
+          :src="candidato.foto"
+          :alt="`${candidato.nome}, candidato a prefeito`"
+        />
+        <figcaption>
+          <span>{{ candidato.numero }}</span>
+          <small>Prefeito</small>
+        </figcaption>
+      </figure>
+
+      <figure v-if="candidato.fotoVice" class="cartao-vice">
+        <div
+          v-if="fotoViceEmSvg"
+          class="foto-vice foto-candidato-svg"
+          role="img"
+          :aria-label="`${candidato.nomeVice || 'Vice'}, candidato a vice-prefeito`"
+          v-html="candidato.fotoVice"
+        ></div>
+        <img
+          v-else
+          class="foto-vice"
+          :src="candidato.fotoVice"
+          :alt="`${candidato.nomeVice || 'Vice'}, candidato a vice-prefeito`"
+        />
+        <figcaption>
+          <small>Vice-prefeito</small>
+          <strong>{{ candidato.nomeVice || 'Vice não informado' }}</strong>
+        </figcaption>
+      </figure>
+    </template>
 
     <div
       v-else

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Urna eletrônica">
+  <rect width="512" height="512" rx="112" fill="#07583f"/>
+  <rect x="106" y="76" width="300" height="360" rx="42" fill="#f8faf8"/>
+  <rect x="148" y="119" width="216" height="108" rx="18" fill="#d9eee5"/>
+  <path d="M179 173h154" stroke="#0c7957" stroke-width="22" stroke-linecap="round"/>
+  <g fill="#202824">
+    <circle cx="190" cy="284" r="22"/><circle cx="256" cy="284" r="22"/><circle cx="322" cy="284" r="22"/>
+    <circle cx="190" cy="350" r="22"/><circle cx="256" cy="350" r="22"/>
+  </g>
+  <rect x="294" y="328" width="57" height="44" rx="12" fill="#45aa76"/>
+</svg>

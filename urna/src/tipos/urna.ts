@@ -3,6 +3,7 @@ export type Candidato = {
   nome: string
   partido: string
   foto: string
+  nomeVice?: string
   fotoVice?: string
 }
 
@@ -11,11 +12,12 @@ export type CandidatoExterno = {
   name: string
   party: string
   photo: string
+  name_vice?: string
   photo_vice?: string
 }
 
-export type ChavesUrnaExternas = {
-  publicId: string
+export type CodigoUrnaExterno = {
+  code: string
 }
 
 export type ResultadoImportacaoExterno = {
@@ -32,7 +34,7 @@ export type EnvelopeArquivoCandidatos = {
 }
 
 export type LogicaUrnaExterna = {
-  initIfNeeded: () => Promise<ChavesUrnaExternas>
+  initIfNeeded: () => Promise<CodigoUrnaExterno>
   getCandidates: () => { candidates?: CandidatoExterno[] }
   inputNumber: (number: string) => CandidatoExterno | null
   confirmVote: (number: string) => Record<string, number>

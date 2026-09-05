@@ -14,13 +14,14 @@ function converterCandidato(candidato: CandidatoExterno): Candidato {
     nome: candidato.name,
     partido: candidato.party,
     foto: candidato.photo,
+    nomeVice: candidato.name_vice,
     fotoVice: candidato.photo_vice,
   }
 }
 
 export async function inicializarUrna() {
-  const chaves = await obterLogicaExterna().initIfNeeded()
-  return { codigoPublico: chaves.publicId }
+  const urna = await obterLogicaExterna().initIfNeeded()
+  return { codigo: urna.code }
 }
 
 export function obterCandidatos(): Candidato[] {

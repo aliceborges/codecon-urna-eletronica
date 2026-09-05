@@ -11,43 +11,33 @@ import {
   buscarCandidatoPorNumero,
   confirmarVotoBranco,
   confirmarVotoCandidato,
-  obterCandidatos,
 } from '../servicos/logicaUrna'
 import { concluirSessaoVotacao } from '../estado/sessaoVotacao'
 import type { TipoVoto } from '../estado/sessaoVotacao'
-import type { Candidato } from '../tipos/urna'
 
 const roteador = useRouter()
 const numeroVoto = ref('')
-const candidatos = ref<Candidato[]>([])
-
-const quantidadeDigitos = computed(() => {
-  const maiorQuantidade = candidatos.value.reduce(
-    (maior, candidato) => Math.max(maior, String(candidato.numero).length),
-    0,
-  )
-
-  return maiorQuantidade || 3
-})
+const quantidadeDigitos = 3
 const candidatoSelecionado = computed(() => {
-  if (!numeroVoto.value) return null
+  if (numeroVoto.value.length !== quantidadeDigitos) return null
 
   return buscarCandidatoPorNumero(numeroVoto.value)
 })
 const candidatoNaoEncontrado = computed(
-  () => numeroVoto.value.length === quantidadeDigitos.value && !candidatoSelecionado.value,
+  () => numeroVoto.value.length === quantidadeDigitos && !candidatoSelecionado.value,
 )
-const podeConfirmarCandidato = computed(() => Boolean(candidatoSelecionado.value))
+const podeConfirmarCandidato = computed(
+  () => numeroVoto.value.length === quantidadeDigitos && Boolean(candidatoSelecionado.value),
+)
 
 onMounted(() => {
-  candidatos.value = obterCandidatos()
   window.addEventListener('keydown', tratarTecladoFisico)
 })
 
 onUnmounted(() => window.removeEventListener('keydown', tratarTecladoFisico))
 
 function inserirDigito(digito: string) {
-  if (numeroVoto.value.length >= quantidadeDigitos.value) return
+  if (numeroVoto.value.length >= quantidadeDigitos) return
 
   numeroVoto.value += digito
 }
