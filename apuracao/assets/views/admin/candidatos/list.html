@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% block title %}Candidatos{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Candidatos</h1>
+  <div class="spacer"></div>
+  <a class="btn" href="/admin/candidatos/novo">+ Novo candidato</a>
+</div>
+
+{% if candidatos | length == 0 %}
+  <div class="card empty">Nenhum candidato cadastrado ainda.</div>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>Nº</th>
+      <th>Titular</th>
+      <th>Vice</th>
+      <th>Partido</th>
+      <th style="text-align:right">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in candidatos %}
+    <tr>
+      <td><span class="pill">{{ c.numero }}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="svg-thumb">{% if c.foto_svg %}{{ c.foto_svg | safe }}{% else %}<span class="muted">—</span>{% endif %}</span>
+          {{ c.nome }}
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="svg-thumb">{% if c.foto_vice_svg %}{{ c.foto_vice_svg | safe }}{% else %}<span class="muted">—</span>{% endif %}</span>
+          {{ c.nome_vice }}
+        </div>
+      </td>
+      <td>{{ c.partido }}</td>
+      <td>
+        <div class="actions" style="justify-content:flex-end">
+          <a class="btn ghost small" href="/admin/candidatos/{{ c.id }}/editar">Editar</a>
+          <form method="post" action="/admin/candidatos/{{ c.id }}/excluir"
+                onsubmit="return confirm('Excluir o candidato {{ c.nome }}?')">
+            <button class="btn danger small" type="submit">Excluir</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

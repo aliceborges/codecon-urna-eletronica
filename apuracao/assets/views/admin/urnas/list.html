@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+{% block title %}Urnas{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Urnas</h1>
+  <div class="spacer"></div>
+  <a class="btn" href="/admin/urnas/nova">+ Nova urna</a>
+</div>
+
+{% if urnas | length == 0 %}
+  <div class="card empty">Nenhuma urna cadastrada ainda.</div>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>Nome / Local</th>
+      <th>Chave pública</th>
+      <th style="text-align:right">Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in urnas %}
+    <tr>
+      <td>{{ u.nome }}</td>
+      <td><code>{{ u.chave_publica }}</code></td>
+      <td>
+        <div class="actions" style="justify-content:flex-end">
+          <a class="btn ghost small" href="/admin/urnas/{{ u.id }}/editar">Editar</a>
+          <form method="post" action="/admin/urnas/{{ u.id }}/excluir"
+                onsubmit="return confirm('Excluir a urna {{ u.nome }}?')">
+            <button class="btn danger small" type="submit">Excluir</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

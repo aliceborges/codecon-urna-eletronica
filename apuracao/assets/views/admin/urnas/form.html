@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="spacer"></div>
+  <a class="btn ghost" href="/admin/urnas">Voltar</a>
+</div>
+
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<form method="post" action="{{ action }}" class="card form">
+  <label>Nome / Local de votação
+    <input name="nome" value="{{ u.nome }}" required placeholder="ex.: Escola Municipal — Seção 042">
+  </label>
+  <label>Chave pública (6 dígitos)
+    <input name="chave_publica" value="{{ u.chave_publica }}" required placeholder="ex.: 483920">
+  </label>
+  <div class="actions">
+    <button class="btn" type="submit">Salvar</button>
+    <a class="btn ghost" href="/admin/urnas">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
