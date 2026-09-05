@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { prepararAudioBotao, tocarAudioBotao } from "../../servicos/audioBotao";
+import audioBotaoUrna from "../../assets/audios/botao.mp3";
 
 const numeros = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-prepararAudioBotao();
+const inicioSomBotao = 0.053;
+const audioBotao = new Audio(audioBotaoUrna);
+audioBotao.preload = "auto";
+audioBotao.load();
 
 defineProps<{
   podeConfirmar: boolean
@@ -14,6 +17,12 @@ const emitir = defineEmits<{
   corrigir: []
   confirmar: []
 }>()
+
+function tocarAudioBotao() {
+  audioBotao.pause();
+  audioBotao.currentTime = inicioSomBotao;
+  void audioBotao.play().catch(() => undefined);
+}
 
 function acionarBotao(evento: "branco" | "corrigir" | "confirmar") {
   tocarAudioBotao();
