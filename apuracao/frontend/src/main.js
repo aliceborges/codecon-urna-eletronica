@@ -3,7 +3,7 @@ import './style.css'
 import { fetchCandidates, fetchPollReportPage } from './api.js'
 
 /** Intervalo entre páginas — é o que dá o ritmo de apuração na tela. */
-const PAGINA_MS = Number(import.meta.env.VITE_PAGINA_MS) || 400
+const PAGINA_MS = Number(import.meta.env.VITE_PAGINA_MS) || 3000
 
 /** Espera antes de reler uma página que falhou, e teto de tentativas.
  *  A votação já está encerrada e cada página é lida uma vez só: uma leitura
@@ -216,7 +216,7 @@ Alpine.data('apuracao', () => ({
   /** Texto do indicador de estado. */
   get situacao() {
     if (this.travado) return 'Apuração interrompida'
-    if (this.lendo) return `Lendo página ${this.pagina} de ${this.totalPaginas}`
+    if (this.lendo) return `Apuração em progresso ${(this.pagina / this.totalPaginas * 100).toFixed(2)}%.`
     if (this.contando) return 'Apurando…'
     return 'Apuração encerrada'
   },
