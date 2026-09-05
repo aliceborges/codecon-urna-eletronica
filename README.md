@@ -1,4 +1,4 @@
-# CLAUDE.md — Urna Codecon
+# Urna Codecon
 
 Guia do projeto para quem for desenvolver. Dois serviços independentes, tudo **offline**, cada um com seu próprio front-end.
 
