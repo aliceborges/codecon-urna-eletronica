@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% block title %}Exportar carga{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Exportar carga — {{ urna.nome }}</h1>
+  <div class="spacer"></div>
+  <a class="btn ghost" href="/admin/urnas">Voltar</a>
+</div>
+
+<div class="card">
+  <p>Chave da urna (6 dígitos): <span class="pill">{{ urna.chave_publica }}</span></p>
+  <p>Candidatos incluídos na carga: <strong>{{ total }}</strong></p>
+
+  <p style="margin-bottom:6px">Hash (SHA-256) — confira este valor na urna ao importar:</p>
+  <p><code style="word-break:break-all">{{ hash }}</code></p>
+
+  {% if total == 0 %}
+    <div class="alert">Não há candidatos cadastrados. Cadastre candidatos antes de exportar a carga.</div>
+  {% else %}
+    <div class="actions">
+      <a class="btn" href="/admin/urnas/{{ urna.id }}/carga/download">Baixar candidates.enc.json</a>
+      <a class="btn ghost" href="/admin/urnas/{{ urna.id }}/carga/preview" target="_blank">Ver sem criptografia (validação)</a>
+    </div>
+  {% endif %}
+
+  <p class="muted" style="margin-top:18px">
+    O arquivo é criptografado com a <strong>chave de 6 dígitos</strong> da urna (AES-256-GCM).
+    A urna importa com <code>importEncryptedCandidates(encrypted, hash)</code> e confere o hash acima.
+  </p>
+</div>
+{% endblock %}

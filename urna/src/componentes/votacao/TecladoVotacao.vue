@@ -1,16 +1,32 @@
 <script setup lang="ts">
+import { prepararAudioBotao, tocarAudioBotao } from "../../servicos/audioBotao";
+
 const numeros = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+prepararAudioBotao();
 
 defineProps<{
   podeConfirmar: boolean
 }>()
 
-defineEmits<{
+const emitir = defineEmits<{
   digito: [valor: string]
   branco: []
   corrigir: []
   confirmar: []
 }>()
+
+function acionarBotao(evento: "branco" | "corrigir" | "confirmar") {
+  tocarAudioBotao();
+
+  if (evento === "branco") emitir("branco");
+  else if (evento === "corrigir") emitir("corrigir");
+  else emitir("confirmar");
+}
+
+function inserirDigito(numero: string) {
+  tocarAudioBotao();
+  emitir("digito", numero);
+}
 </script>
 
 <template>
@@ -27,24 +43,24 @@ defineEmits<{
         type="button"
         :class="{ 'tecla-zero': numero === '0' }"
         :aria-label="`Digitar ${numero}`"
-        @click="$emit('digito', numero)"
+        @click="inserirDigito(numero)"
       >
         {{ numero }}
       </button>
     </div>
 
     <div class="teclas-acao">
-      <button class="tecla-acao tecla-branco" type="button" @click="$emit('branco')">
+      <button class="tecla-acao tecla-branco" type="button" @click="acionarBotao('branco')">
         <span>Branco</span>
       </button>
-      <button class="tecla-acao tecla-corrige" type="button" @click="$emit('corrigir')">
+      <button class="tecla-acao tecla-corrige" type="button" @click="acionarBotao('corrigir')">
         <span>Corrige</span>
       </button>
       <button
         class="tecla-acao tecla-confirma"
         type="button"
         :disabled="!podeConfirmar"
-        @click="$emit('confirmar')"
+        @click="acionarBotao('confirmar')"
       >
         <span>Confirma</span>
       </button>

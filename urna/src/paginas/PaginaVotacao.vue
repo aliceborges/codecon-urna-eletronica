@@ -7,7 +7,7 @@ import DetalhesCandidato from "../componentes/votacao/DetalhesCandidato.vue";
 import EntradaNumeroCandidato from "../componentes/votacao/EntradaNumeroCandidato.vue";
 import RetratoCandidato from "../componentes/votacao/RetratoCandidato.vue";
 import TecladoVotacao from "../componentes/votacao/TecladoVotacao.vue";
-import audioUrnaEletronica from "../assets/audios/urnaeletronica.mp3";
+import audioUrnaEletronica from "../assets/audios/sucesso.mp3";
 import {
   buscarCandidatoPorNumero,
   confirmarVotoBranco,

@@ -23,19 +23,54 @@
     <input name="nome" value="{{ c.nome }}" required placeholder="Nome do candidato">
   </label>
   <label>Foto do titular (SVG inline) <span class="muted">— opcional</span>
-    <textarea name="foto_svg" rows="4" placeholder="&lt;svg ...&gt;...&lt;/svg&gt;">{% if c.foto_svg %}{{ c.foto_svg }}{% endif %}</textarea>
+    <input type="file" accept=".svg,image/svg+xml" data-alvo="foto_svg" style="margin-top:6px">
+    <span class="muted" style="font-weight:400;font-size:12px">Envie um .svg ou cole o código abaixo.</span>
+    <textarea id="foto_svg" name="foto_svg" rows="4" placeholder="&lt;svg ...&gt;...&lt;/svg&gt;">{% if c.foto_svg %}{{ c.foto_svg }}{% endif %}</textarea>
   </label>
+  <div class="svg-thumb" id="preview_foto_svg" style="width:72px;height:72px;margin:-6px 0 14px"></div>
 
   <label>Nome do vice
     <input name="nome_vice" value="{{ c.nome_vice }}" required placeholder="Nome do vice">
   </label>
   <label>Foto do vice (SVG inline) <span class="muted">— opcional</span>
-    <textarea name="foto_vice_svg" rows="4" placeholder="&lt;svg ...&gt;...&lt;/svg&gt;">{% if c.foto_vice_svg %}{{ c.foto_vice_svg }}{% endif %}</textarea>
+    <input type="file" accept=".svg,image/svg+xml" data-alvo="foto_vice_svg" style="margin-top:6px">
+    <span class="muted" style="font-weight:400;font-size:12px">Envie um .svg ou cole o código abaixo.</span>
+    <textarea id="foto_vice_svg" name="foto_vice_svg" rows="4" placeholder="&lt;svg ...&gt;...&lt;/svg&gt;">{% if c.foto_vice_svg %}{{ c.foto_vice_svg }}{% endif %}</textarea>
   </label>
+  <div class="svg-thumb" id="preview_foto_vice_svg" style="width:72px;height:72px;margin:-6px 0 14px"></div>
 
   <div class="actions">
     <button class="btn" type="submit">Salvar</button>
     <a class="btn ghost" href="/admin/candidatos">Cancelar</a>
   </div>
 </form>
+
+<script>
+  // Conveniência: ler o arquivo SVG e preencher o textarea existente + preview.
+  // Não altera o envio do formulário nem a geração dos JSON.
+  (function () {
+    function liga(arquivoSel, textareaId, previewId) {
+      var inp = document.querySelector(arquivoSel);
+      var ta = document.getElementById(textareaId);
+      var prev = document.getElementById(previewId);
+      function render() {
+        if (!prev) return;
+        prev.innerHTML = (ta.value || '').trim();
+        if (window.congelarSvgs) window.congelarSvgs(prev);
+      }
+      if (inp) {
+        inp.addEventListener('change', function () {
+          var f = inp.files && inp.files[0];
+          if (!f) return;
+          var r = new FileReader();
+          r.onload = function () { ta.value = r.result; render(); };
+          r.readAsText(f);
+        });
+      }
+      if (ta) { ta.addEventListener('input', render); render(); }
+    }
+    liga('input[data-alvo="foto_svg"]', 'foto_svg', 'preview_foto_svg');
+    liga('input[data-alvo="foto_vice_svg"]', 'foto_vice_svg', 'preview_foto_vice_svg');
+  })();
+</script>
 {% endblock %}

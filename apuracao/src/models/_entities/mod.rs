@@ -3,5 +3,6 @@
 pub mod prelude;
 
 pub mod candidatos;
+pub mod poll_reports;
 pub mod urnas;
 pub mod users;

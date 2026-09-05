@@ -52,6 +52,7 @@ impl Hooks for App {
     fn routes(_ctx: &AppContext) -> AppRoutes {
         AppRoutes::with_default_routes() // controller routes below
             .add_route(controllers::admin::routes())
+            .add_route(controllers::apuracao_api::routes())
             .add_route(controllers::urnas::routes())
             .add_route(controllers::candidatos::routes())
             .add_route(controllers::auth::routes())

@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% block title %}Receber boletim{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Receber boletim — {{ urna.nome }}</h1>
+  <div class="spacer"></div>
+  <a class="btn ghost" href="/admin/urnas">Voltar</a>
+</div>
+
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<div class="card">
+  <p>Envie o arquivo do <strong>poll_report</strong> exportado por esta urna. Ele é
+     descriptografado com a chave de 6 dígitos cadastrada
+     (<span class="pill">{{ urna.chave_publica }}</span>) e você confere o hash
+     <strong>antes de aceitar</strong>.</p>
+  <form method="post" action="/admin/urnas/{{ urna.id }}/boletim/preview"
+        enctype="multipart/form-data" class="form">
+    <label>Arquivo do boletim (.json)
+      <input type="file" name="arquivo" accept=".json,application/json,text/plain" required>
+    </label>
+    <div class="actions">
+      <button class="btn" type="submit">Descriptografar e conferir</button>
+    </div>
+  </form>
+</div>
+
+<h2 style="margin-top:28px;font-size:18px">Boletins recebidos</h2>
+{% if recebidos | length == 0 %}
+  <div class="card empty">Nenhum boletim recebido ainda.</div>
+{% else %}
+<table>
+  <thead>
+    <tr><th>Terminal</th><th>Total</th><th>Hash</th><th>Recebido em</th></tr>
+  </thead>
+  <tbody>
+    {% for r in recebidos %}
+    <tr>
+      <td>{% if r.terminal_id %}{{ r.terminal_id }}{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td>{{ r.total }}</td>
+      <td><code style="word-break:break-all">{{ r.hash }}</code></td>
+      <td class="muted">{{ r.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
