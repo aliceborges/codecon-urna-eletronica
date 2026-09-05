@@ -12,6 +12,15 @@
   --color-eletrico: #273aff;
 }
 
+/* Moldura da foto do candidato: o SVG do cadastro preenche o quadro. */
+@utility retrato {
+  overflow: hidden;
+  & svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
 [x-cloak] {
   display: none !important;
 }

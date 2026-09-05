@@ -34,6 +34,22 @@
         </div>
       </header>
 
+      <!-- A votação já terminou; quem manda começar a contagem é o operador. -->
+      <template x-if="status === 'ocioso'">
+        <div class="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+          <p class="max-w-sm text-sm text-gelo/50">
+            A votação está encerrada e os boletins já estão no backend.
+            Inicie a apuração para contar os votos.
+          </p>
+          <button
+            @click="iniciar"
+            class="rounded-lg bg-limao px-6 py-3 font-medium text-noite transition hover:brightness-110"
+          >
+            Iniciar apuração
+          </button>
+        </div>
+      </template>
+
       <!-- Primeira carga -->
       <template x-if="status === 'carregando'">
         <p class="text-sm text-gelo/50">Carregando apuração…</p>
@@ -98,8 +114,8 @@
             <template x-for="c in ranking" :key="c.number">
               <li class="flex items-center gap-4 rounded-xl bg-carvao p-4">
                 <div
-                  class="size-14 shrink-0 overflow-hidden rounded-lg [&_svg]:size-full"
-                  :style="`background: ${cor(c.number)}`"
+                  class="retrato size-14 shrink-0 rounded-lg"
+                  :style="`background: ${c.cor}`"
                   x-html="c.photo"
                 ></div>
 
@@ -113,7 +129,7 @@
                   <div class="mt-2 h-2 overflow-hidden rounded-full bg-noite">
                     <div
                       class="h-full rounded-full transition-[width] duration-100 ease-linear"
-                      :style="`width: ${percentual(c.number)}%; background: ${cor(c.number)}`"
+                      :style="`width: ${percentual(c.number)}%; background: ${c.cor}`"
                     ></div>
                   </div>
                 </div>
@@ -133,8 +149,8 @@
               class="mt-auto flex items-center gap-5 rounded-2xl border border-limao/40 bg-limao/10 p-6"
             >
               <div
-                class="size-20 shrink-0 overflow-hidden rounded-xl [&_svg]:size-full"
-                :style="`background: ${cor(vencedor.number)}`"
+                class="retrato size-20 shrink-0 rounded-xl"
+                :style="`background: ${vencedor.cor}`"
                 x-html="vencedor.photo"
               ></div>
               <div>
