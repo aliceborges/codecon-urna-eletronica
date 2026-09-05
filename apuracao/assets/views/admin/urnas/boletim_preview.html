@@ -1,0 +1,53 @@
+{% extends "admin/base.html" %}
+{% block title %}Conferir boletim{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Conferir boletim — {{ urna.nome }}</h1>
+  <div class="spacer"></div>
+  <a class="btn ghost" href="/admin/urnas/{{ urna.id }}/boletim">Voltar</a>
+</div>
+
+<div class="card">
+  <p>Terminal: <strong>{% if terminal_id %}{{ terminal_id }}{% else %}—{% endif %}</strong>
+     &nbsp;·&nbsp; Total de votos: <strong>{{ total }}</strong></p>
+
+  <p style="margin-bottom:6px">Hash calculado (do conteúdo decifrado):</p>
+  <p><code style="word-break:break-all">{{ hash_calculado }}</code></p>
+
+  {% if hash_arquivo %}
+    <p style="margin-bottom:6px">Hash informado no arquivo:</p>
+    <p><code style="word-break:break-all">{{ hash_arquivo }}</code></p>
+    {% if hash_confere %}
+      <div class="alert" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">
+        ✅ Hash confere — o conteúdo bate com o hash do arquivo.
+      </div>
+    {% else %}
+      <div class="alert">
+        ⚠️ Hash NÃO confere — o conteúdo não corresponde ao hash informado. Não aceite sem verificar.
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="alert" style="background:#fffbeb;border-color:#fde68a;color:#92400e">
+      O arquivo não trouxe um hash para comparar. Confira o hash calculado acima com o exibido na urna.
+    </div>
+  {% endif %}
+
+  <h2 style="font-size:16px;margin-top:18px">Votos por número</h2>
+  <table>
+    <thead><tr><th>Número</th><th>Votos</th></tr></thead>
+    <tbody>
+      {% for t in tally %}
+      <tr><td><span class="pill">{{ t.numero }}</span></td><td>{{ t.votos }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <form method="post" action="/admin/urnas/{{ urna.id }}/boletim/aceitar" style="margin-top:18px">
+    <input type="hidden" name="encrypted" value="{{ encrypted }}">
+    <div class="actions">
+      <button class="btn" type="submit">Aceitar boletim</button>
+      <a class="btn ghost" href="/admin/urnas/{{ urna.id }}/boletim">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -25,6 +25,8 @@
       <td><code>{{ u.chave_publica }}</code></td>
       <td>
         <div class="actions" style="justify-content:flex-end">
+          <a class="btn small" href="/admin/urnas/{{ u.id }}/carga">Exportar carga</a>
+          <a class="btn ghost small" href="/admin/urnas/{{ u.id }}/boletim">Receber boletim</a>
           <a class="btn ghost small" href="/admin/urnas/{{ u.id }}/editar">Editar</a>
           <form method="post" action="/admin/urnas/{{ u.id }}/excluir"
                 onsubmit="return confirm('Excluir a urna {{ u.nome }}?')">
