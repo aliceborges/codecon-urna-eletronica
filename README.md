@@ -61,7 +61,7 @@ Contrato (`candidates.json`):
 }
 ```
 
-`photo` é um SVG, renderizado **inline** pela urna (não dentro de um `<img>`), pra poder estilizar e animar junto do tema da urna.
+`photo` e `vice_photo` são SVGs, renderizados **inline** pela urna (não dentro de um `<img>`), pra poder estilizar e animar junto do tema da urna. Cada candidato traz o titular (`name`/`photo`) e o vice (`vice_name`/`vice_photo`).
 
 `apuracao_public_key` é a chave pública da apuração que gerou a carga. A urna a usa para criptografar o `poll_report` no fim da votação.
 

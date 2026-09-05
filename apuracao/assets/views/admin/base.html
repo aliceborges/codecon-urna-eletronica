@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Admin{% endblock %} · Apuração Urna Codecon</title>
+  <style>
+    :root {
+      --bg: #0f172a; --panel: #ffffff; --ink: #0f172a; --muted: #64748b;
+      --line: #e2e8f0; --accent: #4f46e5; --accent-ink: #ffffff;
+      --danger: #dc2626; --ok: #16a34a; --soft: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--ink); background: var(--soft);
+      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    header.topbar {
+      background: var(--bg); color: #e2e8f0; padding: 0 24px;
+      display: flex; align-items: center; gap: 24px; height: 60px;
+    }
+    header.topbar .brand { font-weight: 700; letter-spacing: .2px; color: #fff; }
+    header.topbar .brand span { color: #a5b4fc; }
+    header.topbar nav { display: flex; gap: 4px; margin-left: auto; }
+    header.topbar nav a {
+      color: #cbd5e1; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-weight: 500;
+    }
+    header.topbar nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
+    main { max-width: 1000px; margin: 32px auto; padding: 0 24px; }
+    .page-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .page-head h1 { font-size: 22px; margin: 0; }
+    .page-head .spacer { margin-left: auto; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; background: var(--panel);
+            border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    th { background: #f1f5f9; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+    tr:last-child td { border-bottom: 0; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: var(--accent-ink);
+           border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; font-size: 14px;
+           text-decoration: none; cursor: pointer; }
+    .btn:hover { filter: brightness(1.08); }
+    .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+    .btn.small { padding: 6px 10px; font-size: 13px; }
+    .btn.danger { background: #fff; color: var(--danger); border: 1px solid #fecaca; }
+    .btn.danger:hover { background: #fef2f2; }
+    .actions { display: flex; gap: 8px; }
+    .alert { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+             padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; }
+    form.form label { display: block; margin-bottom: 14px; font-weight: 600; font-size: 13px; color: #334155; }
+    form.form input, form.form textarea {
+      display: block; width: 100%; margin-top: 6px; padding: 10px 12px; font: inherit;
+      border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink);
+    }
+    form.form textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; resize: vertical; }
+    form.form .row { display: flex; gap: 16px; }
+    form.form .row label { flex: 1; }
+    .svg-thumb { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px;
+                 background: #fff; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+    .svg-thumb svg, .svg-thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .muted { color: var(--muted); }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3;
+            font-weight: 700; font-size: 13px; }
+    .empty { text-align: center; color: var(--muted); padding: 40px; }
+    .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+    .stat .n { font-size: 34px; font-weight: 800; }
+    .stat .l { color: var(--muted); font-weight: 600; }
+    code { background: #f1f5f9; padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Urna <span>Codecon</span> · Apuração</div>
+    <nav>
+      <a href="/admin">Painel</a>
+      <a href="/admin/candidatos">Candidatos</a>
+      <a href="/admin/urnas">Urnas</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

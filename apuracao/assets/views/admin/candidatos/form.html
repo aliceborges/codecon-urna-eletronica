@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ title }}</h1>
+  <div class="spacer"></div>
+  <a class="btn ghost" href="/admin/candidatos">Voltar</a>
+</div>
+
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<form method="post" action="{{ action }}" class="card form">
+  <div class="row">
+    <label>Número
+      <input name="numero" value="{{ c.numero }}" required inputmode="numeric" placeholder="ex.: 10">
+    </label>
+    <label>Partido
+      <input name="partido" value="{{ c.partido }}" required placeholder="ex.: Legenda">
+    </label>
+  </div>
+
+  <label>Nome do titular
+    <input name="nome" value="{{ c.nome }}" required placeholder="Nome do candidato">
+  </label>
+  <label>Foto do titular (SVG inline) <span class="muted">— opcional</span>
+    <textarea name="foto_svg" rows="4" placeholder="&lt;svg ...&gt;...&lt;/svg&gt;">{% if c.foto_svg %}{{ c.foto_svg }}{% endif %}</textarea>
+  </label>
+
+  <label>Nome do vice
+    <input name="nome_vice" value="{{ c.nome_vice }}" required placeholder="Nome do vice">
+  </label>
+  <label>Foto do vice (SVG inline) <span class="muted">— opcional</span>
+    <textarea name="foto_vice_svg" rows="4" placeholder="&lt;svg ...&gt;...&lt;/svg&gt;">{% if c.foto_vice_svg %}{{ c.foto_vice_svg }}{% endif %}</textarea>
+  </label>
+
+  <div class="actions">
+    <button class="btn" type="submit">Salvar</button>
+    <a class="btn ghost" href="/admin/candidatos">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
