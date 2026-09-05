@@ -53,13 +53,15 @@ Contrato (`candidates.json`):
       "number": "10",
       "name": "Nome do Candidato",
       "party": "Legenda",
-      "photo": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>...</svg>"
+      "photo": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>...</svg>",
+      "vice_name": "Nome do Vice",
+      "vice_photo": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>...</svg>"
     }
   ]
 }
 ```
 
-`photo` é um SVG, renderizado **inline** pela urna (não dentro de um `<img>`), pra poder estilizar e animar junto do tema da urna.
+`photo` e `vice_photo` são SVGs, renderizados **inline** pela urna (não dentro de um `<img>`), pra poder estilizar e animar junto do tema da urna. Cada candidato traz o titular (`name`/`photo`) e o vice (`vice_name`/`vice_photo`).
 
 `apuracao_public_key` é a chave pública da apuração que gerou a carga. A urna a usa para criptografar o `poll_report` no fim da votação.
 
