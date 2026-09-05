@@ -29,10 +29,19 @@ const PAGINAS = Math.max(1, Number(process.env.PAGINAS) || 6)
 const LATENCIA = Number(process.env.LATENCIA) || 0
 const DIVERGIR = Number(process.env.DIVERGIR) || 0
 
-const [PAGINA_RUIM, FALHAS_ATE] = (process.env.FALHAR ?? '').split(':')
-const paginaRuim = Number(PAGINA_RUIM) || null
-const falhasAte = FALHAS_ATE === undefined ? Infinity : Number(FALHAS_ATE)
+const [alvoFalha, limiteFalhas] = (process.env.FALHAR ?? '').split(':')
+const paginaRuim = Number(alvoFalha) || null
+const falhasAte = limiteFalhas === undefined ? Infinity : Number(limiteFalhas)
 const tentativasNaPaginaRuim = new Map()
+
+/** Espelha os tokens de `src/style.css`, que é a fonte única da paleta. O Node
+ *  não lê o CSS, então quando a paleta mudar lá, mude aqui junto. */
+const PALETA = {
+  noite: '#0e1014',
+  limao: '#b1ff37',
+  uva: '#8552e9',
+  eletrico: '#273aff',
+}
 
 /** Retrato geométrico — o contrato pede SVG renderizado inline pela tela.
  *  Os fundos seguem a ordem de cores que a tela usa nas barras. */
@@ -43,9 +52,9 @@ const retrato = (fundo, tom) => `<svg viewBox="0 0 200 200" xmlns="http://www.w3
 </svg>`
 
 const CANDIDATOS = [
-  { number: '10', name: 'Ana Ribeiro', party: 'Partido Aurora', photo: retrato('#273aff', '#0e1014') },
-  { number: '20', name: 'Bruno Tavares', party: 'Partido Horizonte', photo: retrato('#8552e9', '#0e1014') },
-  { number: '30', name: 'Célia Moraes', party: 'Partido Raiz', photo: retrato('#b1ff37', '#0e1014') },
+  { number: '10', name: 'Ana Ribeiro', party: 'Partido Aurora', photo: retrato(PALETA.eletrico, PALETA.noite) },
+  { number: '20', name: 'Bruno Tavares', party: 'Partido Horizonte', photo: retrato(PALETA.uva, PALETA.noite) },
+  { number: '30', name: 'Célia Moraes', party: 'Partido Raiz', photo: retrato(PALETA.limao, PALETA.noite) },
 ]
 
 /** Resultado final e como ele se espalha pelas páginas. Os pesos fazem o
