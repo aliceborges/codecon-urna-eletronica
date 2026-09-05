@@ -170,6 +170,25 @@ async function importEncryptedCandidates(encryptedBase64, expectedHashHex){
   const computed = await hashJson(obj);
   const ok = computed === expectedHashHex;
   if (!ok) return {ok:false, computed, obj};
+  // normalize candidates: ensure number is string and gracefully parse legacy vice CSV in photo_vice
+  if (Array.isArray(obj.candidates)) {
+    obj.candidates = obj.candidates.map(c => {
+      const cand = Object.assign({}, c);
+      if (cand.number !== undefined) cand.number = String(cand.number);
+      // If apuração already provides explicit name_vice, keep it.
+      // Legacy format encoded vice info in photo_vice as "Name,Party" — detect and parse that when name_vice missing.
+      if (!cand.name_vice && typeof cand.photo_vice === 'string') {
+        const raw = cand.photo_vice.trim();
+        if (raw && !raw.startsWith('<svg')) {
+          const [name, ...partyParts] = raw.split(',');
+          cand.name_vice = name?.trim();
+          const party = partyParts.join(',').trim();
+          if (party) cand.party_vice = party;
+        }
+      }
+      return cand;
+    });
+  }
   // store candidates and apuracao key
   storage.set(STORAGE_KEYS.CANDIDATES, obj);
   // initialize tally structure

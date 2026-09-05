@@ -7,6 +7,8 @@ type Candidate = {
   party: string
   photo: string
   photo_vice?: string
+  name_vice?: string
+  party_vice?: string
 }
 
 type UrnaKeys = {
@@ -90,10 +92,20 @@ const candidatePhotoIsSvg = computed(() =>
   selectedCandidate.value?.photo?.trim().startsWith('<svg') ?? false,
 )
 const runningMate = computed(() => {
-  const rawValue = selectedCandidate.value?.photo_vice?.trim()
+  const cand = selectedCandidate.value
+  if (!cand) return null
 
+  // Prefer explicit fields (name_vice / party_vice) when provided by apuração
+  if (cand.name_vice) {
+    return {
+      name: cand.name_vice.trim() || 'Vice não informado',
+      party: (cand.party_vice || '').trim(),
+    }
+  }
+
+  // Backwards compatibility: parse legacy CSV encoded in photo_vice
+  const rawValue = cand.photo_vice?.trim()
   if (!rawValue || rawValue.startsWith('<svg')) return null
-
   const [name, ...partyParts] = rawValue.split(',')
   return {
     name: name?.trim() || 'Vice não informado',
