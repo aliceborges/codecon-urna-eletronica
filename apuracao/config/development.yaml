@@ -26,6 +26,15 @@ server:
   host: http://localhost
   # Out of the box middleware configuration. to disable middleware you can changed the `enable` field to `false` of comment the middleware block
   middlewares:
+    # CORS liberado para o front de apuração (Vite) consumir a API de outra origem.
+    cors:
+      enable: true
+      allow_origins:
+        - "*"
+      allow_headers:
+        - "*"
+      allow_methods:
+        - "*"
     static:
       enable: true
       must_exist: true
