@@ -19,6 +19,8 @@ import type { TipoVoto } from "../estado/sessaoVotacao";
 const roteador = useRouter();
 const numeroVoto = ref("");
 const quantidadeDigitos = 3;
+const quantidadeTeclasUmParaExportar = 10;
+let teclasUmConsecutivas = 0;
 const audioConfirmacao = new Audio(audioUrnaEletronica);
 const candidatoSelecionado = computed(() => {
   if (numeroVoto.value.length !== quantidadeDigitos) return null;
@@ -43,16 +45,27 @@ onMounted(() => {
 onUnmounted(() => window.removeEventListener("keydown", tratarTecladoFisico));
 
 function inserirDigito(digito: string) {
+  teclasUmConsecutivas = digito === "1" ? teclasUmConsecutivas + 1 : 0;
+
+  if (teclasUmConsecutivas === quantidadeTeclasUmParaExportar) {
+    teclasUmConsecutivas = 0;
+    void roteador.push({ name: "exportacao" });
+    return;
+  }
+
   if (numeroVoto.value.length >= quantidadeDigitos) return;
 
   numeroVoto.value += digito;
 }
 
 function limparNumeroVoto() {
+  teclasUmConsecutivas = 0;
   numeroVoto.value = "";
 }
 
 function concluirVoto(tipo: TipoVoto) {
+  teclasUmConsecutivas = 0;
+
   if (tipo === "candidato" && !podeConfirmarCandidato.value) return;
 
   if (tipo === "branco") confirmarVotoBranco();
