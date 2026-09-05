@@ -55,8 +55,7 @@ Contrato (`candidates.json`):
       "party": "Legenda",
       "photo": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>...</svg>",
       "name_vice": "Nome do Vice (opcional)",
-      "party_vice": "Partido do Vice (opcional)",
-      "photo_vice": "<svg>...</svg> (opcional; legacy CSV "Nome,Partido" também suportado)"
+      "photo_vice": "<svg>...</svg> (opcional; legacy CSV \"Nome,Partido\" também suportado)"
     }
   ]
 }

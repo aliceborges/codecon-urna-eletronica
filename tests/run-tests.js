@@ -100,7 +100,7 @@ async function run(){
   const apPubPem = arrayBufferToPem(apSpki, 'PUBLIC KEY');
   const apPrivPem = arrayBufferToPem(apPkcs8, 'PRIVATE KEY');
 
-  const candidatesObj = { apuracao_public_key: apPubPem, candidates:[{number:'10', name:'Alice', party:'X', photo:'<svg/>', name_vice: 'NomeVice', party_vice: 'PartidoVice', photo_vice: '<svg/vice/>'}] };
+  const candidatesObj = { apuracao_public_key: apPubPem, candidates:[{number:'10', name:'Alice', party:'X', photo:'<svg/>', name_vice: 'NomeVice', photo_vice: '<svg/vice/>'}] };
   const candidatesJson = stableStringify(candidatesObj);
   // compute hash using same stableStringify -> SHA-256 hex
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(candidatesJson));
@@ -116,7 +116,6 @@ async function run(){
   // ensure vice fields passed through
   const importedCandidate = U.getCandidates().candidates[0];
   assert.strictEqual(importedCandidate.name_vice, 'NomeVice');
-  assert.strictEqual(importedCandidate.party_vice, 'PartidoVice');
   assert.strictEqual(importedCandidate.photo_vice, '<svg/vice/>');
 
   console.log('4) Testing vote flow and tally persistence');

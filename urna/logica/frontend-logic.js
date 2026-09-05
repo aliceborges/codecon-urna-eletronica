@@ -180,10 +180,8 @@ async function importEncryptedCandidates(encryptedBase64, expectedHashHex){
       if (!cand.name_vice && typeof cand.photo_vice === 'string') {
         const raw = cand.photo_vice.trim();
         if (raw && !raw.startsWith('<svg')) {
-          const [name, ...partyParts] = raw.split(',');
+          const [name] = raw.split(',');
           cand.name_vice = name?.trim();
-          const party = partyParts.join(',').trim();
-          if (party) cand.party_vice = party;
         }
       }
       return cand;

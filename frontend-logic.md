@@ -39,7 +39,6 @@ Contratos JSON
       "party": "Legenda",
       "photo": "<svg>...</svg>",
       "name_vice": "Nome do Vice (opcional)",
-      "party_vice": "Partido do Vice (opcional)",
       "photo_vice": "<svg>...</svg> (opcional)"
     }
   ]

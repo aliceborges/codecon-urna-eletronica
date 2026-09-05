@@ -8,7 +8,7 @@ Funcionalidades
 
 - Geração e persistência de chaves (RSA-OAEP + JWK) e ID público de 6 dígitos
 - Importação de carga criptografada (candidates.json) com verificação de hash
-- Suporte a campos explícitos de vice: name_vice, party_vice e photo_vice no candidates.json. (Compatibilidade: se name_vice ausente e photo_vice contiver "Nome,Partido" o formato legado é automaticamente parseado.)
+- Suporte ao campo name_vice e photo_vice no candidates.json. (Compatibilidade: se name_vice ausente e photo_vice contiver "Nome,Partido" o formato legado é automaticamente parseado para extrair o nome do vice.)
 - Fluxo de votação: inputNumber(), confirmVote(), contagem local (tally)
 - Exportação do poll_report (criptografado com a chave pública da apuração) com hash
 - Persistência via localStorage (chaves, candidatos, tally)
