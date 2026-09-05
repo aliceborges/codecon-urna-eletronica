@@ -87,7 +87,7 @@ const fotoViceEmSvg = computed(
       </div>
       <strong>{{
         naoEncontrado
-          ? "Candidato não localizado"
+          ? "Candidato não encontrado"
           : "Nenhum candidato selecionado"
       }}</strong>
       <small>{{
