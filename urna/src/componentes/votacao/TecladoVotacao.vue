@@ -2,7 +2,10 @@
 import audioBotaoUrna from "../../assets/audios/botao.mp3";
 
 const numeros = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+const inicioSomBotao = 0.053;
 const audioBotao = new Audio(audioBotaoUrna);
+audioBotao.preload = "auto";
+audioBotao.load();
 
 defineProps<{
   podeConfirmar: boolean
@@ -16,7 +19,8 @@ const emitir = defineEmits<{
 }>()
 
 function tocarAudioBotao() {
-  audioBotao.currentTime = 0;
+  audioBotao.pause();
+  audioBotao.currentTime = inicioSomBotao;
   void audioBotao.play().catch(() => undefined);
 }
 
