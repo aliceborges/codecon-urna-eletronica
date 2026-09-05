@@ -1,7 +1,22 @@
 {
   "name": "codecon-urna-eletronica",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "scripts": {
-    "test": "node tests/run-tests.js"
-  }
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "SPA em Alpine.js",
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.2"
+  },
+  "dependencies": {
+    "alpinejs": "^3.17.1"
+  },
+  "private": true,
+  "type": "module"
 }
