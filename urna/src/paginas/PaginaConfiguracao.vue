@@ -69,6 +69,7 @@ async function selecionarArquivoCandidatos(evento: Event) {
 
   nomeArquivoSelecionado.value = arquivo.name
   cargaCriptografada.value = ''
+  hashEsperado.value = ''
   limparRetornoImportacao()
 
   try {
@@ -84,8 +85,6 @@ async function selecionarArquivoCandidatos(evento: Event) {
       }
 
       cargaCriptografada.value = envelope.encrypted.trim()
-
-      if (typeof envelope.hash === 'string') hashEsperado.value = envelope.hash.trim()
     } catch {
       cargaCriptografada.value = conteudoArquivo
     }
