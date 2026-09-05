@@ -15,6 +15,10 @@
   --sombra: 0 32px 80px rgba(33, 49, 42, 0.14);
 }
 
+html {
+  touch-action: manipulation;
+}
+
 * {
   box-sizing: border-box;
 }
