@@ -52,6 +52,40 @@ const GAP = 8
 /** Passo horizontal da fileira: largura do card (w-42) + gap. */
 const PASSO_FILEIRA = 176
 
+/** Sorteia um número no intervalo, para variar as trajetórias do fundo. */
+const sorteio = (min, max) => min + Math.random() * (max - min)
+
+/** Camada decorativa: textos e emojis cruzando a tela. Os valores são
+ *  sorteados uma vez na montagem; daí em diante é só CSS. */
+Alpine.data('fundo', () => ({
+  itens: [],
+
+  init() {
+    const conteudos = ['eleições codecon', 'in code we trust', '🐥', '🐼']
+
+    this.itens = Array.from({ length: 100 }, (_, i) => {
+      const texto = conteudos[i % conteudos.length]
+      const ehEmoji = !texto.includes(' ')
+      const inverso = i % 3 === 0
+      const umAngulo = sorteio(-30, 30).toFixed(1)
+
+      return {
+        texto,
+        inverso,
+        estilo: [
+          `top: ${sorteio(-10, 100).toFixed(1)}%`,
+          `font-size: ${(ehEmoji ? sorteio(28, 72) : sorteio(13, 30)).toFixed(0)}px`,
+          `opacity: ${sorteio(0.02, 0.06).toFixed(3)}`,
+          `--giro: ${umAngulo}deg`,
+          // Bem devagar, e com atraso negativo para já começarem espalhados.
+          `animation-duration: ${sorteio(45, 110).toFixed(0)}s`,
+          `animation-delay: -${sorteio(0, 110).toFixed(0)}s`,
+        ].join('; '),
+      }
+    })
+  },
+}))
+
 Alpine.data('apuracao', () => ({
   candidates: [],
 

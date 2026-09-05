@@ -86,6 +86,45 @@
   --color-verde: #00a352;
 }
 
+/* Fundo decorativo: textos e emojis atravessando a tela na diagonal.
+   A animação é toda em CSS — sem timer em JS, e só transform, que o
+   compositor resolve sem recalcular layout. */
+@keyframes atravessar {
+  from {
+    transform: translate3d(-45vw, 45vh, 0) rotate(var(--giro));
+  }
+  to {
+    transform: translate3d(145vw, -85vh, 0) rotate(var(--giro));
+  }
+}
+
+@keyframes atravessar-inverso {
+  from {
+    transform: translate3d(145vw, 45vh, 0) rotate(var(--giro));
+  }
+  to {
+    transform: translate3d(-45vw, -85vh, 0) rotate(var(--giro));
+  }
+}
+
+.foguete {
+  animation-name: atravessar;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.foguete-inverso {
+  animation-name: atravessar-inverso;
+}
+
+/* Decoração não deve se mover para quem pediu menos movimento. */
+@media (prefers-reduced-motion: reduce) {
+  .fundo-decorativo {
+    display: none;
+  }
+}
+
 /* Moldura da foto do candidato: o SVG do cadastro preenche o quadro. */
 @utility retrato {
   overflow: hidden;

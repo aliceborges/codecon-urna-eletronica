@@ -9,7 +9,24 @@
   </head>
 
   <body class="bg-carvao text-gelo">
-    <div x-data="apuracao" x-cloak class="mx-auto flex min-h-dvh max-w-5xl flex-col gap-6 px-6 py-8">
+    <!-- Decoração de fundo. aria-hidden porque não carrega informação. -->
+    <div
+      x-data="fundo"
+      x-cloak
+      aria-hidden="true"
+      class="fundo-decorativo pointer-events-none fixed inset-0 overflow-hidden select-none"
+    >
+      <template x-for="(item, i) in itens" :key="i">
+        <span
+          class="foguete absolute left-0 top-0 whitespace-nowrap font-medium uppercase tracking-widest"
+          :class="item.inverso && 'foguete-inverso'"
+          :style="item.estilo"
+          x-text="item.texto"
+        ></span>
+      </template>
+    </div>
+
+    <div x-data="apuracao" x-cloak class="relative z-10 mx-auto flex min-h-dvh max-w-5xl flex-col gap-6 px-6 py-8">
       <header class="text-center">
         <h1 class="text-3xl font-semibold uppercase tracking-[0.2em]">Eleições Codecon</h1>
 
