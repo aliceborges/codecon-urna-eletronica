@@ -13,67 +13,62 @@ A apuração é a dona dos cadastros (urnas e candidatos): ela exporta um JSON q
 
 Fluxo de ponta a ponta:
 
-1. A urna, ao abrir pela primeira vez, gera seu **par de chaves** e é cadastrada na apuração pela sua **chave pública de 6 dígitos**.
-2. A apuração gera o cadastro (`candidates.json`) — que **inclui a chave pública da própria apuração** —, calcula o **hash do JSON original**, **criptografa com a chave pública da urna** e disponibiliza o arquivo criptografado + o hash.
-3. A urna faz **upload** do arquivo criptografado, descriptografa com a **própria chave privada**, **confere o hash do JSON descriptografado** contra o informado (exibido na tela) e, se bater, **abre a votação**.
-4. Eleitores votam; ao encerrar, a urna monta o boletim (`poll_report`), calcula o **hash do JSON original** e **criptografa com a chave pública da apuração** (recebida no `candidates.json`).
-5. A apuração importa os boletins, descriptografa com a **própria chave privada**, **confere o hash do JSON descriptografado** (exibido na tela), consolida e **declara o vencedor**.
+1. A urna, ao abrir pela primeira vez, gera e armazena um **código de 6 dígitos**; o operador cadastra esse código na apuração.
+2. A apuração gera o cadastro (`candidates.json`), calcula o **hash do JSON original**, **criptografa com o código da urna** e disponibiliza o arquivo criptografado + o hash.
+3. A urna faz **upload** do arquivo criptografado, descriptografa com o **mesmo código**, **confere o hash do JSON descriptografado** contra o informado e, se bater, **abre a votação**.
+4. Eleitores votam; ao encerrar, a urna monta o boletim (`poll_report`), calcula o **hash do JSON original** e o **criptografa com o código da urna**.
+5. A apuração importa os boletins, descriptografa cada um com o **código da urna correspondente**, confere o hash, consolida e **declara o vencedor**.
 
-> Não há assinatura. A troca usa **criptografia assimétrica nos dois sentidos** (cada lado só lê com a própria chave privada) e o **hash é do JSON original (antes de criptografar)** — garante que o conteúdo real é válido, e fica visível para os usuários nas telas na hora de importar.
+> Não há assinatura. A troca usa **AES-256-GCM**, com chave derivada por SHA-256 do código de 6 dígitos, e o **hash é do JSON original (antes de criptografar)**. Como o código possui somente 1.000.000 de combinações, este é um esquema de demonstração e não oferece confidencialidade forte.
 
 ---
 
-## Provisionamento da urna (chave pública + carga criptografada)
+## Provisionamento da urna (código compartilhado + carga criptografada)
 
 Etapa que acontece **antes** da votação, quando a urna é preparada.
 
-1. **Primeira abertura da urna** — o front gera uma **chave pública de 6 dígitos**. Essa chave identifica a urna e é usada para criptografar a carga que ela vai receber.
-2. **Cadastro no backend** — a chave pública de 6 dígitos é registrada na apuração, ligando aquela urna ao seu material de votação.
-3. **Geração da carga** — a apuração monta o cadastro (`candidates.json`), inclui nele a **própria chave pública**, calcula o **hash do JSON original** e **criptografa usando a chave pública de 6 dígitos** daquela urna específica.
+1. **Primeira abertura da urna** — o front gera um **código aleatório de 6 dígitos**. O código identifica a urna e funciona como chave compartilhada.
+2. **Cadastro no backend** — o código é registrado na apuração, ligando aquela urna ao seu material de votação.
+3. **Geração da carga** — a apuração monta o cadastro (`candidates.json`), calcula o **hash do JSON original** e o **criptografa usando o código** daquela urna específica.
 4. **Upload na urna** — a urna recebe (upload) o **arquivo criptografado** e o **hash**.
-5. **Conferência** — a urna descriptografa com a **própria chave privada** e recalcula o hash do JSON obtido, comparando com o informado (**exibido na tela** para o usuário conferir). Batendo, **abre o processo de votação**; se não bater, recusa a carga.
+5. **Conferência** — a urna descriptografa com o **código armazenado** e recalcula o hash do JSON obtido, comparando com o informado. Batendo, **abre o processo de votação**; se não bater, recusa a carga.
 
-> A chave de 6 dígitos é a chave pública da urna: fácil de digitar/conferir no cadastro, e é o que a apuração usa para criptografar a carga daquela urna. Só a urna, com sua chave privada, consegue abrir o arquivo — se alguém interceptar no caminho, não lê o conteúdo.
+> O código de 6 dígitos precisa ser tratado como segredo compartilhado entre a urna e a apuração, observada a limitação de segurança descrita acima.
 
 ---
 
 ## Cadastro de candidatos (a apuração gera, a urna importa)
 
-A apuração é a fonte única do cadastro. Ela exporta o `candidates.json` (criptografado para a urna, conforme acima), e a urna importa pra montar a cédula. O `number` é a chave que liga tudo: a urna registra o voto pelo número, o boletim conta por número, e o cadastro dá nome e imagem de cada número.
-
-Além dos candidatos, o `candidates.json` carrega a **chave pública da apuração** (`apuracao_public_key`). A urna guarda essa chave e a usa no fim para **criptografar o boletim** (`poll_report`) de volta — assim só a apuração, com sua chave privada, consegue ler o retorno.
+A apuração é a fonte única do cadastro. Ela exporta o `candidates.json` (criptografado para a urna, conforme acima), e a urna importa pra montar a cédula. O `number` é a chave de 3 dígitos que liga tudo: a urna registra o voto pelo número, o boletim conta por número, e o cadastro dá nome e imagem de cada número.
 
 Contrato (`candidates.json`):
 
 ```json
 {
-  "apuracao_public_key": "7c1b...",
   "candidates": [
     {
-      "number": "10",
+      "number": "123",
       "name": "Nome do Candidato",
       "party": "Legenda",
       "photo": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>...</svg>",
-      "name_vice": "Nome do Vice (opcional)",
-      "photo_vice": "<svg>...</svg> (opcional; legacy CSV \"Nome,Partido\" também suportado)"
+      "name_vice": "Nome do Vice",
+      "photo_vice": "<svg>...</svg>"
     }
   ]
 }
 ```
 
-`photo` e `vice_photo` são SVGs, renderizados **inline** pela urna (não dentro de um `<img>`), pra poder estilizar e animar junto do tema da urna. Cada candidato traz o titular (`name`/`photo`) e o vice (`vice_name`/`vice_photo`).
-
-`apuracao_public_key` é a chave pública da apuração que gerou a carga. A urna a usa para criptografar o `poll_report` no fim da votação.
+`photo` e `photo_vice` são SVGs, renderizados **inline** pela urna. Cada candidato traz o titular (`name`/`photo`) e o vice (`name_vice`/`photo_vice`).
 
 ---
 
 ## Serviço 1: Urna de votação (`urna/`)
 
-Autônoma e offline. Gera seu par de chaves na primeira abertura (a pública tem 6 dígitos), importa a carga criptografada (conferindo o hash e descriptografando com a própria privada), recebe os votos, faz a própria contagem e, quando é encerrada, emite um boletim (`poll_report`) com o total dela.
+Autônoma e offline. Gera seu código de 6 dígitos na primeira abertura, importa a carga criptografada com esse código, confere o hash, recebe os votos, faz a própria contagem e, quando é encerrada, emite um boletim (`poll_report`) com o total dela.
 
 Front-end: tela de votação, onde o eleitor escolhe o candidato pelo número e confirma vendo o nome e a imagem (o SVG do cadastro, renderizado inline).
 
-No encerramento, a urna monta o `poll_report`, calcula o **hash do JSON original** e o **criptografa com a chave pública da apuração** (`apuracao_public_key`, recebida no `candidates.json`). Só a apuração, com sua chave privada, consegue abrir o retorno. Junto do arquivo criptografado vai o **hash do JSON original**, exibido na tela para conferência.
+No encerramento, a urna monta o `poll_report`, calcula o **hash do JSON original** e o **criptografa com seu código de 6 dígitos**. Junto do arquivo criptografado vai o hash para conferência.
 
 Conteúdo do boletim (`poll_report`) **antes de criptografar**:
 
@@ -82,18 +77,18 @@ Conteúdo do boletim (`poll_report`) **antes de criptografar**:
   "terminal_id": "terminal-01",
   "type": "poll_report",
   "issued_at": "2026-09-02T20:00:00Z",
-  "tally": { "10": 12, "20": 9, "30": 5 },
+  "tally": { "123": 12, "456": 9, "789": 5 },
   "total": 26
 }
 ```
 
-O que trafega é esse JSON **criptografado com a chave pública da apuração**, acompanhado do **hash do JSON original (antes de criptografar)** para conferência visual nas duas pontas.
+O que trafega é esse JSON **criptografado com o código da urna**, acompanhado do **hash do JSON original (antes de criptografar)**.
 
 ---
 
 ## Serviço 2: Apuração (`apuracao/`)
 
-Dona dos cadastros. Tem seu próprio par de chaves e injeta a **chave pública** (`apuracao_public_key`) no `candidates.json`. Registra as urnas (pela chave pública de 6 dígitos), exporta o `candidates.json` criptografado que a urna consome, e no fim importa os `poll_report` de todas as urnas. Para cada boletim, **descriptografa com a própria chave privada** e **confere o hash do JSON obtido** (exibido na tela); só então consolida e declara o vencedor.
+Dona dos cadastros. Registra cada urna pelo seu código de 6 dígitos, exporta o `candidates.json` criptografado com esse código e, no fim, importa os `poll_report`. Para cada boletim, descriptografa com o código da urna correspondente e confere o hash antes de consolidar e declarar o vencedor.
 
 Front-end: tela de apuração, onde os votos aparecem sendo contados e no fim aparece o nome e a imagem do vencedor. Vale colocar um delay/suspense na contagem em vez de já cuspir o número de uma vez, fica bem melhor de assistir.
 
@@ -103,8 +98,8 @@ Contrato de saída (`consolidated_report`):
 {
   "type": "consolidated_report",
   "issued_at": "2026-09-02T21:10:00Z",
-  "tally": { "10": 40, "20": 33, "30": 18 },
-  "winner": "10",
+  "tally": { "123": 40, "456": 33, "789": 18 },
+  "winner": "123",
   "total": 91
 }
 ```
@@ -115,6 +110,6 @@ Contrato de saída (`consolidated_report`):
 
 - **Offline**: os dois serviços operam sem depender de rede entre si; a troca é por arquivos (export/import).
 - **`number` como chave**: liga cadastro, voto e boletim.
-- **Sigilo nos dois sentidos**: toda troca é criptografada com a chave pública do destinatário (apuração→urna com a pública da urna; urna→apuração com a pública da apuração). Cada lado só lê com a própria chave privada; quem interceptar no caminho não vê o conteúdo.
+- **Criptografia nos dois sentidos**: `candidates.json` e `poll_report` usam AES-256-GCM com uma chave derivada do código da urna. É um esquema de demonstração, vulnerável a força bruta por causa do espaço de apenas 6 dígitos.
 - **Integridade por hash**: o hash é sempre do **JSON original (antes de criptografar)**, garantindo que o conteúdo real é válido. Trafega junto do arquivo e é **exibido nas telas** para conferência visual na hora de importar, nas duas pontas. Não há assinatura.
 - **Front-ends separados**: `urna/` e `apuracao/` são independentes.

@@ -24,8 +24,11 @@ const CORES = ['var(--color-eletrico)', 'var(--color-uva)', 'var(--color-limao)'
 Alpine.data('apuracao', () => ({
   candidates: [],
 
-  /** Tally de cada página lida: { [numeroDaPagina]: tally }. */
-  paginas: {},
+  /** Votos já lidos, somados página a página. As páginas chegam uma vez só e
+   *  em ordem fixa, então dá para acumular direto em vez de guardar cada uma. */
+  alvo: {},
+  alvoTotal: 0,
+
   /** Página sendo lida agora. */
   pagina: 1,
   totalPaginas: 1,
@@ -35,49 +38,63 @@ Alpine.data('apuracao', () => ({
   /** Números na tela, correndo atrás do alvo. */
   counted: {},
 
-  status: 'carregando', // carregando | pronto | erro
+  status: 'ocioso', // ocioso | carregando | cadastrado | apurando | erro
   erro: '',
   tentativas: 0,
-  /** Desistimos de uma página depois de MAX_TENTATIVAS. */
-  travado: false,
   /** Vira true ao ler a última página: a apuração acabou. */
   completo: false,
 
   timerPagina: null,
   timerAnim: null,
 
-  init() {
-    this.iniciar()
-  },
-
   destroy() {
     clearTimeout(this.timerPagina)
     clearInterval(this.timerAnim)
   },
 
-  async iniciar() {
+  /** Etapa 1: busca o cadastro e mostra os candidatos zerados. */
+  async carregarCadastro() {
     this.status = 'carregando'
     this.erro = ''
-    this.paginas = {}
-    this.pagina = 1
-    this.totalGeral = 0
-    this.tentativas = 0
-    this.travado = false
-    this.completo = false
 
     try {
-      this.candidates = await fetchCandidates()
-      this.counted = Object.fromEntries(this.candidates.map((c) => [c.number, 0]))
-      this.status = 'pronto'
+      const cadastro = await fetchCandidates()
+      // A cor acompanha o candidato desde o cadastro, então não muda quando o
+      // ranking se reorganiza.
+      this.candidates = cadastro.map((c, i) => ({ ...c, cor: CORES[i % CORES.length] }))
+      this.zerar()
+      this.status = 'cadastrado'
     } catch (e) {
       this.erro = e.message
       this.status = 'erro'
-      return
     }
+  },
 
-    clearInterval(this.timerAnim)
-    this.timerAnim = setInterval(() => this.passo(), INTERVALO)
+  /** Etapa 2: começa a ler as páginas e a contar. */
+  iniciar() {
+    this.zerar()
+    this.status = 'apurando'
+    this.animar()
     this.ciclo()
+  },
+
+  /** Volta a apuração ao ponto de partida, mantendo o cadastro. */
+  zerar() {
+    clearTimeout(this.timerPagina)
+    this.pagina = 1
+    this.totalPaginas = 1
+    this.totalGeral = 0
+    this.alvoTotal = 0
+    this.tentativas = 0
+    this.completo = false
+    this.erro = ''
+    this.counted = Object.fromEntries(this.candidates.map((c) => [c.number, 0]))
+    this.alvo = Object.fromEntries(this.candidates.map((c) => [c.number, 0]))
+  },
+
+  /** Liga a animação dos números, se ainda não estiver rodando. */
+  animar() {
+    if (!this.timerAnim) this.timerAnim = setInterval(() => this.passo(), INTERVALO)
   },
 
   /** Lê a página atual, reflete na tela e segue para a próxima. */
@@ -85,7 +102,12 @@ Alpine.data('apuracao', () => ({
     try {
       const p = await fetchPollReportPage(this.pagina)
 
-      this.paginas[p.page] = p.tally
+      for (const [numero, votos] of Object.entries(p.tally)) {
+        if (numero in this.alvo) {
+          this.alvo[numero] += votos
+          this.alvoTotal += votos
+        }
+      }
       this.totalPaginas = p.totalPaginas
       this.totalGeral = p.total
       this.erro = ''
@@ -102,39 +124,30 @@ Alpine.data('apuracao', () => ({
       this.erro = e.message
       this.tentativas++
 
-      if (!this.temDados) {
-        this.status = 'erro'
-      } else if (this.tentativas < MAX_TENTATIVAS) {
+      if (!this.travado) {
         this.timerPagina = setTimeout(() => this.ciclo(), RETRY_MS * this.tentativas)
-      } else {
-        // Não dá para seguir sem esta página: o total ficaria errado em
-        // silêncio. Para e deixa a decisão na tela.
-        this.travado = true
       }
+      // Esgotadas as tentativas, `travado` para tudo: seguir sem esta página
+      // deixaria o total errado em silêncio.
     }
   },
 
   /** Retoma da página que falhou, sem perder as já lidas. */
   retomar() {
-    this.travado = false
     this.tentativas = 0
     this.erro = ''
+    this.animar()
     this.ciclo()
   },
 
-  get temDados() {
-    return Object.keys(this.paginas).length > 0
+  /** Cadastro na tela: seja aguardando o início, seja apurando. */
+  get temCadastro() {
+    return this.status === 'cadastrado' || this.status === 'apurando'
   },
 
-  /** Soma das páginas lidas até agora — o número real que a tela persegue. */
-  get alvo() {
-    const soma = Object.fromEntries(this.candidates.map((c) => [c.number, 0]))
-    for (const tally of Object.values(this.paginas)) {
-      for (const [numero, votos] of Object.entries(tally)) {
-        if (numero in soma) soma[numero] += votos
-      }
-    }
-    return soma
+  /** Desistimos da página depois de MAX_TENTATIVAS. */
+  get travado() {
+    return this.tentativas >= MAX_TENTATIVAS
   },
 
   /** Aproxima os números exibidos dos reais, um passo por vez. */
@@ -146,8 +159,8 @@ Alpine.data('apuracao', () => ({
       const salto = Math.max(1, Math.ceil(Math.abs(diferenca) * SUAVIZACAO))
       this.counted[numero] = atual + Math.sign(diferenca) * Math.min(salto, Math.abs(diferenca))
     }
-    // Acabou de contar e não há mais página: nada a animar daqui pra frente.
-    if (this.completo && !this.contando) {
+    // Nada mais a animar: nem página por vir, nem número por alcançar.
+    if (!this.contando && (this.completo || this.travado)) {
       clearInterval(this.timerAnim)
       this.timerAnim = null
     }
@@ -157,10 +170,6 @@ Alpine.data('apuracao', () => ({
     return Object.values(this.counted).reduce((soma, n) => soma + n, 0)
   },
 
-  get alvoTotal() {
-    return Object.values(this.alvo).reduce((soma, n) => soma + n, 0)
-  },
-
   /** True enquanto os números na tela ainda estão subindo. */
   get contando() {
     return this.apurados !== this.alvoTotal
@@ -168,7 +177,7 @@ Alpine.data('apuracao', () => ({
 
   /** True enquanto ainda existem páginas por ler. */
   get lendo() {
-    return !this.completo && !this.travado
+    return this.status === 'apurando' && !this.completo && !this.travado
   },
 
   /** A apuração terminou e a tela já mostra o número final. */
@@ -184,8 +193,7 @@ Alpine.data('apuracao', () => ({
   /** O backend declara o total; a soma das páginas tem que bater com ele.
    *  Se não bater, alguma página veio errada e o resultado não fecha. */
   get divergencia() {
-    if (!this.completo || !this.totalGeral) return 0
-    return this.alvoTotal - this.totalGeral
+    return this.completo && this.totalGeral > 0 && this.alvoTotal !== this.totalGeral
   },
 
   /** Candidatos ordenados pela contagem atual — o ranking se reorganiza sozinho. */
@@ -194,15 +202,8 @@ Alpine.data('apuracao', () => ({
   },
 
   get vencedor() {
-    const lider = Object.entries(this.alvo).sort(([, a], [, b]) => b - a)[0]
-    if (!lider || !lider[1]) return null
-    return this.candidates.find((c) => c.number === lider[0])
-  },
-
-  /** Cor fixa por candidato — presa ao cadastro, não à posição no ranking. */
-  cor(number) {
-    const i = this.candidates.findIndex((c) => c.number === number)
-    return CORES[i % CORES.length]
+    const lider = this.ranking[0]
+    return lider && this.counted[lider.number] > 0 ? lider : null
   },
 
   percentual(number) {
@@ -216,7 +217,7 @@ Alpine.data('apuracao', () => ({
   /** Texto do indicador de estado. */
   get situacao() {
     if (this.travado) return 'Apuração interrompida'
-    if (this.lendo) return `Apuração em progresso ${(this.pagina / this.totalPaginas * 100).toFixed(2)}%.`
+    if (this.lendo) return `Apuração em progresso ${this.progresso.toFixed(2)}%.`
     if (this.contando) return 'Apurando…'
     return 'Apuração encerrada'
   },

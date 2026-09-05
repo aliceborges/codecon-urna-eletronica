@@ -13,13 +13,22 @@
       <header class="flex items-end justify-between gap-4">
         <div>
           <h1 class="text-3xl font-semibold tracking-tight">Apuração</h1>
-          <p class="mt-1 text-sm text-gelo/50" x-show="status === 'pronto'">
+          <p class="mt-1 text-sm text-gelo/50" x-show="temCadastro">
             <span x-text="formata(apurados)"></span> votos
           </p>
         </div>
 
+        <!-- Cadastro carregado, esperando o operador mandar contar -->
+        <button
+          x-show="status === 'cadastrado'"
+          @click="iniciar"
+          class="rounded-lg bg-limao px-5 py-2.5 text-sm font-medium text-noite transition hover:brightness-110"
+        >
+          Iniciar apuração
+        </button>
+
         <!-- Indicador ao vivo -->
-        <div x-show="status === 'pronto'" class="flex items-center gap-2 text-xs text-gelo/50">
+        <div x-show="status === 'apurando'" class="flex items-center gap-2 text-xs text-gelo/50">
           <span class="relative flex size-2">
             <span
               class="absolute inline-flex size-full animate-ping rounded-full bg-limao opacity-75"
@@ -34,6 +43,22 @@
         </div>
       </header>
 
+      <!-- A votação já terminou; quem manda começar a contagem é o operador. -->
+      <template x-if="status === 'ocioso'">
+        <div class="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+          <p class="max-w-sm text-sm text-gelo/50">
+            A votação está encerrada e os boletins já estão no backend.
+            Comece carregando o cadastro de candidatos.
+          </p>
+          <button
+            @click="carregarCadastro"
+            class="rounded-lg bg-limao px-6 py-3 font-medium text-noite transition hover:brightness-110"
+          >
+            Carregar candidatos
+          </button>
+        </div>
+      </template>
+
       <!-- Primeira carga -->
       <template x-if="status === 'carregando'">
         <p class="text-sm text-gelo/50">Carregando apuração…</p>
@@ -45,7 +70,7 @@
           <p class="font-medium">Não foi possível carregar a apuração</p>
           <p class="mt-1 text-sm text-gelo/50" x-text="erro"></p>
           <button
-            @click="iniciar"
+            @click="carregarCadastro"
             class="mt-4 rounded-lg bg-limao px-4 py-2 text-sm font-medium text-noite transition hover:brightness-110"
           >
             Tentar de novo
@@ -53,7 +78,7 @@
         </div>
       </template>
 
-      <template x-if="status === 'pronto'">
+      <template x-if="temCadastro">
         <div class="contents">
           <!-- Leitura falhou, mas já há resultado na tela: avisa sem apagar nada -->
           <div
@@ -98,8 +123,8 @@
             <template x-for="c in ranking" :key="c.number">
               <li class="flex items-center gap-4 rounded-xl bg-carvao p-4">
                 <div
-                  class="size-14 shrink-0 overflow-hidden rounded-lg [&_svg]:size-full"
-                  :style="`background: ${cor(c.number)}`"
+                  class="retrato size-14 shrink-0 rounded-lg"
+                  :style="`background: ${c.cor}`"
                   x-html="c.photo"
                 ></div>
 
@@ -113,7 +138,7 @@
                   <div class="mt-2 h-2 overflow-hidden rounded-full bg-noite">
                     <div
                       class="h-full rounded-full transition-[width] duration-100 ease-linear"
-                      :style="`width: ${percentual(c.number)}%; background: ${cor(c.number)}`"
+                      :style="`width: ${percentual(c.number)}%; background: ${c.cor}`"
                     ></div>
                   </div>
                 </div>
@@ -133,8 +158,8 @@
               class="mt-auto flex items-center gap-5 rounded-2xl border border-limao/40 bg-limao/10 p-6"
             >
               <div
-                class="size-20 shrink-0 overflow-hidden rounded-xl [&_svg]:size-full"
-                :style="`background: ${cor(vencedor.number)}`"
+                class="retrato size-20 shrink-0 rounded-xl"
+                :style="`background: ${vencedor.cor}`"
                 x-html="vencedor.photo"
               ></div>
               <div>

@@ -1,9 +1,6 @@
 /** Backend da apuração. Sobrescreva com VITE_API_URL no .env. */
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-/** Trava de segurança: impede laço infinito se `total_pages` vier errado. */
-const MAX_PAGINAS = 500
-
 /** Usada quando o cadastro vem sem `photo`. Fotos reais são SVG inline. */
 const SILHUETA = `
   <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
@@ -17,20 +14,15 @@ async function getJSON(url) {
   return res.json()
 }
 
-/** A lista pode vir em `items`, `data`, `results`… ou ser o próprio corpo. */
-function extrairLista(body) {
-  return body?.items ?? body?.data ?? body?.results ?? (Array.isArray(body) ? body : null)
-}
-
 /**
  * Busca o cadastro de candidatos no setup.
  *
- * O setup devolve só a lista, mas o envelope `{ candidates: [...] }` do
- * contrato antigo também é aceito.
+ * O setup devolve a lista pura; o envelope `{ candidates: [...] }` do formato
+ * de arquivo do README também é aceito.
  */
 export async function fetchCandidates() {
   const body = await getJSON(`${BASE}/candidates.json`)
-  const lista = extrairLista(body) ?? body?.candidates
+  const lista = Array.isArray(body) ? body : body?.candidates
   if (!Array.isArray(lista)) throw new Error('Resposta sem a lista de candidatos')
 
   return lista.map((c) => ({ ...c, number: String(c.number), photo: c.photo || SILHUETA }))
@@ -59,7 +51,6 @@ export async function fetchPollReportPage(page) {
   }
 
   return {
-    page: Number(body.page) || page,
     totalPaginas: Math.max(1, Number(body.total_pages) || 1),
     /** Total geral da apuração — o mesmo em todas as páginas. */
     total: Number(body.total) || 0,

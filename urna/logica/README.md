@@ -1,74 +1,45 @@
-README — Urna / Lógica
+# Urna / Lógica
 
-Visão geral
+Este diretório contém a lógica independente de UI da urna. O arquivo
+`frontend-logic.js` expõe a API global `window.UrnaFrontendLogic` e é coberto por
+`tests/run-tests.js`.
 
-Este diretório contém a lógica de frontend da urna (urna/logica/frontend-logic.js). É independente da UI: expõe uma API global (window.UrnaFrontendLogic) que o front consome. Também há testes em tests/run-tests.js e um script npm test.
+## Funcionalidades
 
-Funcionalidades
+- geração e persistência do código de 6 dígitos da urna;
+- derivação de uma chave AES-256-GCM por SHA-256 do código;
+- importação do `candidates.json` criptografado e verificação do hash;
+- suporte aos campos `name_vice` e `photo_vice` (SVG inline);
+- votação, contagem local e persistência do `tally`;
+- exportação do `poll_report` criptografado com o mesmo código.
 
-- Geração e persistência de chaves (RSA-OAEP + JWK) e ID público de 6 dígitos
-- Importação de carga criptografada (candidates.json) com verificação de hash
-- Suporte ao campo name_vice e photo_vice no candidates.json. (Compatibilidade: se name_vice ausente e photo_vice contiver "Nome,Partido" o formato legado é automaticamente parseado para extrair o nome do vice.)
-- Fluxo de votação: inputNumber(), confirmVote(), contagem local (tally)
-- Exportação do poll_report (criptografado com a chave pública da apuração) com hash
-- Persistência via localStorage (chaves, candidatos, tally)
+O envelope criptografado é base64 de um JSON com os campos `iv` e `d`. O
+`candidates.json` não contém `apuracao_public_key`.
 
-Pré-requisitos
+## API principal
 
-- Node.js v16+ para executar os testes (usa crypto.webcrypto)
+- `initIfNeeded(): Promise<{code}>` gera o código quando necessário e retorna o código persistido.
+- `getStoredCode()` retorna o código salvo.
+- `generate6DigitCode()` gera um código; `generateAndStoreCode()` o persiste e
+  limpa carga/contagem vinculadas ao código anterior.
+- `keyFromCode(code)`, `encryptWithCode(code, plaintext)` e
+  `decryptWithCode(code, envelope)` implementam a criptografia simétrica.
+- `importEncryptedCandidates(envelope, expectedHash)` descriptografa, confere o
+  SHA-256 e persiste os candidatos.
+- `getCandidates()`, `getTally()`, `inputNumber(number)` e `confirmVote(number)`
+  implementam o fluxo de votação.
+- `exportPollReport(terminalId)` retorna `{encrypted, hash, report}`.
 
-Como rodar os testes
+## Testes
 
-1. Do diretório raiz do projeto:
-   npm install --no-package-lock --no-audit --no-fund || true
-   npm test
+Na raiz do repositório, execute:
 
-Explicação curta dos testes:
-- tests/run-tests.js carrega frontend-logic.js em um VM, fornece polyfills mínimos (localStorage, TextEncoder/TextDecoder) e valida crypto/hash/import/export/vote flows.
+```sh
+node tests/run-tests.js
+```
 
-API principal (window.UrnaFrontendLogic)
+## Segurança
 
-- initIfNeeded(): Promise<{publicPem, privPem, publicJwk, privateJwk, publicId}>
-  - Gera e armazena chaves se ausentes. publicId é a chave pública de 6 dígitos exibida ao usuário.
-
-- getStoredKeys(): retorna o objeto salvo com chaves e publicId
-
-- importEncryptedCandidates(encryptedBase64, expectedHashHex): Promise<{ok, computed, obj}>
-  - Descriptografa com a chave privada da urna, valida o hash (SHA-256 hex) e grava candidatos + apuracao_public_key no storage.
-  - candidates.json aceita o novo campo photo_vice além de photo.
-
-- getCandidates(), getTally(), inputNumber(number), confirmVote(number)
-  - Fluxo de votação e persistência da contagem.
-
-- exportPollReport(terminalId): Promise<{encrypted, hash, report}>
-  - Monta report, calcula hash (SHA-256 hex) e retorna o payload criptografado com a apuracao_public_key (formato híbrido AES-GCM + RSA-OAEP).
-
-Integração com o frontend (sugestão)
-
-- Opção 1 (incluir script direto): carregar urna/logica/frontend-logic.js antes da app e usar window.UrnaFrontendLogic nas views.
-
-- Opção 2 (ES module wrapper): escrever um wrapper minimal que importa/encapsula a API e converte chamadas para Promises/observables usadas pelo framework (React/Vue/Svelte).
-
-Exemplo mínimo (browser):
-
-<script src="/urna/logica/frontend-logic.js"></script>
-<script>
-  (async ()=>{
-    await window.UrnaFrontendLogic.initIfNeeded();
-    const keys = window.UrnaFrontendLogic.getStoredKeys();
-    console.log('Urna ID:', keys.publicId);
-  })();
-</script>
-
-Notas de segurança
-
-- Todo o tráfego de arquivos entre apuração e urna usa criptografia assimétrica. Hashes exibidos na UI são a forma de conferir integridade.
-- O armazenamento local usa localStorage por simplicidade. Para produção, considere IndexedDB com criptografia ao repouso.
-
-Como criar um script de integração futura
-
-- Escrever um script/node module que importe o arquivo (ou carregue em VM) e exponha funções CLI para: gerar chaves, empacotar candidates.json (criptografar com chave da urna), importar resultados, e exportar poll_report. tests/run-tests.js pode ser referência.
-
-Contato
-
-- Implementado por Copilot CLI (ajustes locais podem ser necessários).
+O código possui apenas 1.000.000 de combinações. A criptografia é adequada ao
+escopo demonstrativo do projeto e não fornece confidencialidade forte contra força
+bruta. O armazenamento local usa `localStorage` por simplicidade.

@@ -12,7 +12,7 @@
 <form method="post" action="{{ action }}" class="card form">
   <div class="row">
     <label>Número
-      <input name="numero" value="{{ c.numero }}" required inputmode="numeric" placeholder="ex.: 10">
+      <input name="numero" value="{{ c.numero }}" required inputmode="numeric" pattern="[0-9]{3}" minlength="3" maxlength="3" placeholder="ex.: 123" title="Informe exatamente 3 dígitos">
     </label>
     <label>Partido
       <input name="partido" value="{{ c.partido }}" required placeholder="ex.: Legenda">
