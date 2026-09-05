@@ -173,8 +173,8 @@
 
                 <!-- Votos -->
                 <div class="shrink-0 pr-2 text-right">
-                  <p class="text-5xl font-semibold tabular-nums" x-text="formata(counted[c.number])"></p>
-                  <p class="text-sm tabular-nums opacity-70" x-text="percentual(c.number).toFixed(1) + '%'"></p>
+                  <p class="font-mono text-5xl font-semibold tabular-nums" x-text="formata(counted[c.number])"></p>
+                  <p class="font-mono text-sm tabular-nums opacity-70" x-text="percentual(c.number).toFixed(1) + '%'"></p>
                 </div>
               </div>
             </template>
@@ -221,9 +221,9 @@
                   </div>
 
                   <p class="mt-1.5 flex items-baseline gap-1.5">
-                    <span class="text-lg font-semibold tabular-nums" x-text="formata(counted[c.number])"></span>
+                    <span class="font-mono text-lg font-semibold tabular-nums" x-text="formata(counted[c.number])"></span>
                     <span
-                      class="text-[10px] tabular-nums text-noite/50"
+                      class="font-mono text-[10px] tabular-nums text-noite/50"
                       x-text="percentual(c.number).toFixed(1) + '%'"
                     ></span>
                   </p>
