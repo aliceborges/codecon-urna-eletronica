@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Interface offline e responsiva de uma urna eletrônica."
+    />
+    <title>Urna eletrônica</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main class="page-shell">
+      <section class="voting-machine" aria-label="Urna eletrônica">
+        <header class="machine-header">
+          <div class="brand-copy">
+            <p>Justiça Eleitoral</p>
+            <strong>Urna eletrônica</strong>
+          </div>
+
+          <div class="terminal-status">
+            <span class="status-dot" aria-hidden="true"></span>
+            Terminal 01
+          </div>
+        </header>
+
+        <div class="machine-body">
+          <section class="ballot-screen" aria-labelledby="ballot-title">
+            <div class="screen-topbar">
+              <span>Seu voto</span>
+              <span>Eleição municipal</span>
+            </div>
+
+            <div class="ballot-content">
+              <div class="candidate-copy">
+                <p class="eyebrow">Candidato</p>
+                <h1 id="ballot-title">Vote para prefeito</h1>
+                <p class="instruction">
+                  Digite o número do candidato no teclado ao lado.
+                </p>
+
+                <div class="candidate-number" aria-label="Número digitado: 12">
+                  <span>1</span>
+                  <span class="active-digit">2</span>
+                </div>
+
+                <div class="candidate-details">
+                  <p class="candidate-name">Marina Oliveira</p>
+                  <p class="candidate-party">Partido do Futuro · PF</p>
+                </div>
+              </div>
+
+              <div class="candidate-media">
+                <figure class="candidate-card">
+                  <svg
+                    class="candidate-photo"
+                    viewBox="0 0 320 360"
+                    role="img"
+                    aria-labelledby="candidate-photo-title"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <title id="candidate-photo-title">
+                      Foto ilustrativa da candidata Marina Oliveira
+                    </title>
+                    <defs>
+                      <linearGradient
+                        id="portrait-bg"
+                        x1="0"
+                        y1="0"
+                        x2="1"
+                        y2="1"
+                      >
+                        <stop offset="0" stop-color="#d8eee5" />
+                        <stop offset="1" stop-color="#a8d7c4" />
+                      </linearGradient>
+                      <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#1d8060" />
+                        <stop offset="1" stop-color="#0d6047" />
+                      </linearGradient>
+                    </defs>
+                    <rect width="320" height="360" fill="url(#portrait-bg)" />
+                    <circle
+                      cx="258"
+                      cy="62"
+                      r="74"
+                      fill="#ffffff"
+                      opacity=".3"
+                    />
+                    <circle
+                      cx="52"
+                      cy="284"
+                      r="96"
+                      fill="#0d7a57"
+                      opacity=".09"
+                    />
+                    <path
+                      d="M67 360c8-78 43-116 93-116s85 38 93 116H67Z"
+                      fill="url(#shirt)"
+                    />
+                    <path
+                      d="M126 226h68v61c-17 18-51 18-68 0v-61Z"
+                      fill="#b97858"
+                    />
+                    <ellipse cx="160" cy="153" rx="69" ry="87" fill="#d89873" />
+                    <path
+                      d="M94 163c-11-48 1-94 41-109 45-17 96 9 94 73-19-5-39-21-51-41-12 28-47 51-84 52v25Z"
+                      fill="#283d37"
+                    />
+                    <path
+                      d="M101 137c-1 59 21 90 59 103-42 0-70-31-69-85 0-6 3-13 10-18Z"
+                      fill="#283d37"
+                    />
+                    <path
+                      d="M219 124c11 5 15 16 12 30l-9 27-7-8 4-49Z"
+                      fill="#283d37"
+                    />
+                    <ellipse cx="133" cy="155" rx="5" ry="7" fill="#273934" />
+                    <ellipse cx="187" cy="155" rx="5" ry="7" fill="#273934" />
+                    <path
+                      d="M145 190c9 8 22 8 31 0"
+                      fill="none"
+                      stroke="#8f4f43"
+                      stroke-linecap="round"
+                      stroke-width="4"
+                    />
+                    <path
+                      d="M117 138c8-6 18-7 27-2M176 136c9-5 19-4 27 2"
+                      fill="none"
+                      stroke="#283d37"
+                      stroke-linecap="round"
+                      stroke-width="4"
+                    />
+                    <path
+                      d="M160 160c-2 10-5 18-8 24 5 3 10 4 15 1"
+                      fill="none"
+                      stroke="#b97858"
+                      stroke-linecap="round"
+                      stroke-width="3"
+                    />
+                    <path
+                      d="m118 266 42 44 42-44 20 18-12 76H110l-12-76 20-18Z"
+                      fill="#f7fbf8"
+                    />
+                    <path
+                      d="m126 250 34 60-42-44 8-16ZM194 250l-34 60 42-44-8-16Z"
+                      fill="#ffffff"
+                    />
+                  </svg>
+                  <figcaption>
+                    <span>12</span>
+                    <small>Prefeita</small>
+                  </figcaption>
+                </figure>
+
+                <figure class="running-mate-card">
+                  <svg
+                    class="running-mate-photo"
+                    viewBox="0 0 120 135"
+                    role="img"
+                    aria-labelledby="running-mate-photo-title"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <title id="running-mate-photo-title">
+                      Foto ilustrativa do candidato a vice Rafael Lima
+                    </title>
+                    <defs>
+                      <linearGradient id="vice-bg" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#e4eee9" />
+                        <stop offset="1" stop-color="#b9d8ca" />
+                      </linearGradient>
+                    </defs>
+                    <rect width="120" height="135" fill="url(#vice-bg)" />
+                    <circle cx="100" cy="22" r="28" fill="#fff" opacity=".35" />
+                    <path
+                      d="M20 135c4-39 18-60 40-60s36 21 40 60H20Z"
+                      fill="#355f52"
+                    />
+                    <path d="M49 68h22v20c-6 7-16 7-22 0V68Z" fill="#b97958" />
+                    <ellipse cx="60" cy="49" rx="25" ry="31" fill="#d99872" />
+                    <path
+                      d="M35 49c-2-24 9-37 26-37 20 0 29 14 25 37-6-3-13-10-18-18-7 9-18 15-33 18Z"
+                      fill="#3d352f"
+                    />
+                    <circle cx="51" cy="49" r="2" fill="#2b3733" />
+                    <circle cx="69" cy="49" r="2" fill="#2b3733" />
+                    <path
+                      d="M53 62c5 4 10 4 15 0"
+                      fill="none"
+                      stroke="#8f4f43"
+                      stroke-linecap="round"
+                      stroke-width="2"
+                    />
+                    <path
+                      d="m47 82 13 17 13-17 8 6-4 47H43l-4-47 8-6Z"
+                      fill="#f7fbf8"
+                    />
+                  </svg>
+                  <figcaption>
+                    <small>Vice</small>
+                    <strong>Rafael Lima</strong>
+                  </figcaption>
+                </figure>
+              </div>
+            </div>
+
+            <footer class="screen-footer">
+              <span><b>Branco</b> para votar em branco</span>
+              <span><b>Corrige</b> para apagar</span>
+              <span><b>Confirma</b> para concluir</span>
+            </footer>
+          </section>
+
+          <section class="keypad-panel" aria-label="Teclado de votação">
+            <div class="keypad-heading">
+              <span>Teclado</span>
+              <div
+                class="accessibility-mark"
+                aria-label="Símbolo de acessibilidade"
+              >
+                ●
+              </div>
+            </div>
+
+            <div class="numeric-keypad">
+              <button type="button">1</button>
+              <button type="button">2</button>
+              <button type="button">3</button>
+              <button type="button">4</button>
+              <button type="button">5</button>
+              <button type="button">6</button>
+              <button type="button">7</button>
+              <button type="button">8</button>
+              <button type="button">9</button>
+              <button class="zero-key" type="button">0</button>
+            </div>
+
+            <div class="action-keys">
+              <button class="action-key blank-key" type="button">
+                <span>Branco</span>
+              </button>
+              <button class="action-key correct-key" type="button">
+                <span>Corrige</span>
+              </button>
+              <button class="action-key confirm-key" type="button">
+                <span>Confirma</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <p class="privacy-note">
+        <span aria-hidden="true">◆</span>
+        Seu voto é secreto e armazenado somente neste terminal.
+      </p>
+    </main>
+  </body>
+</html>
