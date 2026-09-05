@@ -21,7 +21,7 @@ async function getJSON(url) {
  * de arquivo do README também é aceito.
  */
 export async function fetchCandidates() {
-  const body = await getJSON(`${BASE}/apuracao/candidates`)
+  const body = await getJSON(`${BASE}/apuracao/candidates-prod`)
   const lista = Array.isArray(body) ? body : body?.candidates
   if (!Array.isArray(lista)) throw new Error('Resposta sem a lista de candidatos')
 

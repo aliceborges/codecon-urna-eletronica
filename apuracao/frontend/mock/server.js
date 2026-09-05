@@ -113,26 +113,26 @@ createServer(async (req, res) => {
 
   if (LATENCIA) await new Promise((r) => setTimeout(r, LATENCIA))
 
-  if (url.pathname === '/apuracao/candidates') {
-    console.log(`GET /apuracao/candidates -> ${CANDIDATOS.length} candidatos`)
+  if (url.pathname === '/apuracao/candidates-prod') {
+    console.log(`GET /apuracao/candidates-prod -> ${CANDIDATOS.length} candidatos`)
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
     return res.end(TEXTO_CADASTRO)
   }
 
-  if (url.pathname === '/apuracao/resultados') {
+  if (url.pathname === '/apuracao/resultados-prod') {
     const page = Math.min(PAGINAS, Math.max(1, Number(url.searchParams.get('page')) || 1))
 
     if (page === paginaRuim) {
       const tentativa = (tentativasNaPaginaRuim.get(page) ?? 0) + 1
       tentativasNaPaginaRuim.set(page, tentativa)
       if (tentativa <= falhasAte) {
-        console.log(`GET /apuracao/resultados?page=${page} -> 503 (tentativa ${tentativa})`)
+        console.log(`GET /apuracao/resultados-prod?page=${page} -> 503 (tentativa ${tentativa})`)
         return res.writeHead(503).end()
       }
     }
 
     const tally = tallyDaPagina(page)
-    console.log(`GET /apuracao/resultados?page=${page} de ${PAGINAS} -> ${JSON.stringify(tally)}`)
+    console.log(`GET /apuracao/resultados-prod?page=${page} de ${PAGINAS} -> ${JSON.stringify(tally)}`)
     return json(res, 200, {
       type: 'poll_report',
       issued_at: new Date(Date.UTC(2026, 8, 5, 21, 0, 0)).toISOString(),

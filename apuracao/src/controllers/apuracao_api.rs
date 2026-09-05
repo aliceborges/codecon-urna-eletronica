@@ -20,14 +20,9 @@ use crate::models::_entities::{candidatos, poll_reports};
 /// Quantidade fixa de páginas em que o resultado é dividido para a animação.
 const TOTAL_PAGINAS: i64 = 10;
 
-#[debug_handler]
-async fn candidates(State(ctx): State<AppContext>) -> Result<Response> {
-    let items = candidatos::Entity::find()
-        .order_by_asc(candidatos::Column::Numero)
-        .all(&ctx.db)
-        .await?;
-
-    let list: Vec<serde_json::Value> = items
+/// Mapeia os candidatos do banco para o formato consumido pelo front.
+fn mapear_candidatos(items: &[candidatos::Model]) -> Vec<serde_json::Value> {
+    items
         .iter()
         .map(|c| {
             serde_json::json!({
@@ -39,7 +34,42 @@ async fn candidates(State(ctx): State<AppContext>) -> Result<Response> {
                 "photo_vice": c.foto_vice_svg.clone().unwrap_or_default(),
             })
         })
-        .collect();
+        .collect()
+}
+
+#[debug_handler]
+async fn candidates(State(ctx): State<AppContext>) -> Result<Response> {
+    let items = candidatos::Entity::find()
+        .order_by_asc(candidatos::Column::Numero)
+        .all(&ctx.db)
+        .await?;
+    Ok(Json(mapear_candidatos(&items)).into_response())
+}
+
+#[debug_handler]
+async fn candidates_prod(State(ctx): State<AppContext>) -> Result<Response> {
+    let items = candidatos::Entity::find()
+        .order_by_asc(candidatos::Column::Numero)
+        .all(&ctx.db)
+        .await?;
+    let mut list = mapear_candidatos(&items);
+
+    // Candidato adicional, com a foto de assets/static/candidato.svg (ele mesmo como vice).
+    // Remove o prólogo XML (`<?xml ...?>`) para o conteúdo começar em `<svg` e o
+    // front renderizar inline.
+    let raw = std::fs::read_to_string("assets/static/candidato.svg").unwrap_or_default();
+    let foto = match raw.find("<svg") {
+        Some(i) => raw[i..].to_string(),
+        None => raw,
+    };
+    list.push(serde_json::json!({
+        "number": "666",
+        "name": "Gabriel - O Totalitário",
+        "party": "Codequistão",
+        "photo": foto.clone(),
+        "name_vice": "Gabriel - O Totalitário",
+        "photo_vice": foto,
+    }));
 
     Ok(Json(list).into_response())
 }
@@ -98,17 +128,9 @@ fn distribuir(votos: i64, pesos: &[u64]) -> Vec<i64> {
     partes
 }
 
-#[debug_handler]
-async fn resultados(
-    State(ctx): State<AppContext>,
-    Query(q): Query<ParamsPagina>,
-) -> Result<Response> {
-    // Página pedida, com clamp em 1..=TOTAL_PAGINAS.
-    let page = q.page.unwrap_or(1).clamp(1, TOTAL_PAGINAS);
-
-    // Consolida todos os boletins recebidos: soma os votos de cada número.
+/// Consolida todos os boletins recebidos: soma os votos de cada número.
+async fn consolidar_boletins(ctx: &AppContext) -> Result<BTreeMap<String, i64>> {
     let boletins = poll_reports::Entity::find().all(&ctx.db).await?;
-
     let mut consolidado: BTreeMap<String, i64> = BTreeMap::new();
     for boletim in &boletins {
         let Ok(serde_json::Value::Object(mapa)) =
@@ -122,7 +144,18 @@ async fn resultados(
             }
         }
     }
+    Ok(consolidado)
+}
 
+#[debug_handler]
+async fn resultados(
+    State(ctx): State<AppContext>,
+    Query(q): Query<ParamsPagina>,
+) -> Result<Response> {
+    // Página pedida, com clamp em 1..=TOTAL_PAGINAS.
+    let page = q.page.unwrap_or(1).clamp(1, TOTAL_PAGINAS);
+
+    let consolidado = consolidar_boletins(&ctx).await?;
     let total: i64 = consolidado.values().sum();
 
     // Fatia da página pedida: para cada número, a parte que cai nesta página.
@@ -146,9 +179,50 @@ async fn resultados(
     Ok(Json(valor).into_response())
 }
 
+#[debug_handler]
+async fn resultados_prod(
+    State(ctx): State<AppContext>,
+    Query(q): Query<ParamsPagina>,
+) -> Result<Response> {
+    let page = q.page.unwrap_or(1).clamp(1, TOTAL_PAGINAS);
+
+    let consolidado = consolidar_boletins(&ctx).await?;
+    let total_real: i64 = consolidado.values().sum();
+    let max_real: i64 = consolidado.values().copied().max().unwrap_or(0);
+    // Votos do Gabriel: sempre acima do líder real (margem de ~20%, mínimo 3).
+    let gabriel = max_real + (max_real / 5).max(3);
+
+    // Candidatos reais: mesma distribuição em 10 páginas do resultados normal.
+    let mut tally = serde_json::Map::new();
+    for (numero, votos) in &consolidado {
+        let pesos = pesos_do_numero(numero);
+        let partes = distribuir(*votos, &pesos);
+        let parte = partes[usize::try_from(page - 1).unwrap_or(0)];
+        tally.insert(numero.clone(), serde_json::json!(parte));
+    }
+
+    // Gabriel (666) aparece SÓ na última página, já com votos suficientes para vencer.
+    if page == TOTAL_PAGINAS {
+        tally.insert("666".to_string(), serde_json::json!(gabriel));
+    }
+
+    let valor = serde_json::json!({
+        "type": "poll_report",
+        "issued_at": chrono::Utc::now().to_rfc3339(),
+        "tally": tally,
+        "total": total_real + gabriel,
+        "page": page,
+        "total_pages": TOTAL_PAGINAS,
+    });
+
+    Ok(Json(valor).into_response())
+}
+
 pub fn routes() -> Routes {
     Routes::new()
         .prefix("/apuracao")
         .add("/candidates", get(candidates))
+        .add("/candidates-prod", get(candidates_prod))
         .add("/resultados", get(resultados))
+        .add("/resultados-prod", get(resultados_prod))
 }
