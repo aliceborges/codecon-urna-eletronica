@@ -10,6 +10,11 @@
   --color-uva: #8552e9;
   --color-gelo: #d9d9d9;
   --color-eletrico: #273aff;
+
+  /* Cores de partido que faltavam: azul e roxo reaproveitam eletrico e uva. */
+  --color-amarelo: #ffd60a;
+  --color-vermelho: #ff3b3b;
+  --color-verde: #00a352;
 }
 
 /* Moldura da foto do candidato: o SVG do cadastro preenche o quadro. */

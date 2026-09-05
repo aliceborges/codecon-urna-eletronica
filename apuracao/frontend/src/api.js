@@ -15,17 +15,23 @@ async function getJSON(url) {
 }
 
 /**
- * Busca o cadastro de candidatos no setup.
+ * Busca o cadastro de candidatos.
  *
- * O setup devolve a lista pura; o envelope `{ candidates: [...] }` do formato
+ * O backend devolve a lista pura; o envelope `{ candidates: [...] }` do formato
  * de arquivo do README também é aceito.
  */
 export async function fetchCandidates() {
-  const body = await getJSON(`${BASE}/candidates.json`)
+  const body = await getJSON(`${BASE}/apuracao/candidates`)
   const lista = Array.isArray(body) ? body : body?.candidates
   if (!Array.isArray(lista)) throw new Error('Resposta sem a lista de candidatos')
 
-  return lista.map((c) => ({ ...c, number: String(c.number), photo: c.photo || SILHUETA }))
+  return lista.map((c) => ({
+    ...c,
+    number: String(c.number),
+    photo: c.photo || SILHUETA,
+    // Só há foto de vice quando há vice; sem foto, cai na silhueta.
+    photo_vice: c.name_vice ? c.photo_vice || SILHUETA : null,
+  }))
 }
 
 /**
@@ -36,11 +42,14 @@ export async function fetchCandidates() {
  * mudam só o `tally` — o pedaço dos votos daquela página — e o número da
  * página. `total` é o total geral da apuração e vem igual em todas.
  *
+ * O `tally` traz chaves que não são candidatos (`blank`), e o `total` as conta:
+ * quem soma precisa incluí-las para fechar com o total declarado.
+ *
  * A votação já está encerrada e a ordem das páginas não muda: o conjunto é
  * fixo do começo ao fim, cada página é lida uma vez, e a última encerra.
  */
 export async function fetchPollReportPage(page) {
-  const body = await getJSON(`${BASE}/poll_report?page=${page}`)
+  const body = await getJSON(`${BASE}/apuracao/resultados?page=${page}`)
   if (!body?.tally || typeof body.tally !== 'object') {
     throw new Error('Resposta sem o tally da página')
   }

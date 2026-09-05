@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs'
 import './style.css'
 import { fetchCandidates, fetchPollReportPage } from './api.js'
+import { coresDoCandidato } from './partidos.js'
 
 /** Intervalo entre páginas — é o que dá o ritmo de apuração na tela. */
 const PAGINA_MS = Number(import.meta.env.VITE_PAGINA_MS) || 3000
@@ -17,9 +18,39 @@ const INTERVALO = 60
 /** Fração da diferença consumida a cada passo — dá a subida com suspense. */
 const SUAVIZACAO = 0.12
 
-/** Cor de cada candidato, na ordem do cadastro. Lima fica por último porque
- *  também é a cor do sistema (progresso, eleito). */
-const CORES = ['var(--color-eletrico)', 'var(--color-uva)', 'var(--color-limao)']
+/** Palavras que não entram na sigla derivada de um partido sem sigla própria. */
+const ATONAS = new Set(['do', 'da', 'de', 'dos', 'das', 'e', 'na', 'no'])
+
+/**
+ * Separa "PLN - Partido do Legado Nacional" em sigla e nome.
+ * Quando o dado não traz sigla, deriva das iniciais das palavras com peso.
+ */
+function separarPartido(party) {
+  const texto = String(party ?? '').trim()
+  const [inicio, ...resto] = texto.split(/\s+-\s+/)
+  if (resto.length) return { sigla: inicio, partidoNome: resto.join(' - ') }
+
+  const sigla = texto
+    .split(/\s+/)
+    .filter((palavra) => palavra && !ATONAS.has(palavra.toLowerCase()))
+    .map((palavra) => palavra[0])
+    .join('')
+    .toUpperCase()
+  return { sigla, partidoNome: texto }
+}
+
+/** Quantos candidatos ficam no pódio, empilhados. O resto vai para a fileira. */
+const PODIO = 3
+
+/** Geometria do pódio. A altura do card sai daqui e é aplicada no style, então
+ *  o cálculo e o HTML não têm como divergir. O 2º e o 3º usam `scale`: assim
+ *  tamanho e posição animam na mesma transição de transform. */
+const ALTURA_PODIO = 212
+const ESCALA_PODIO = 0.82
+const GAP = 8
+
+/** Passo horizontal da fileira: largura do card (w-42) + gap. */
+const PASSO_FILEIRA = 176
 
 Alpine.data('apuracao', () => ({
   candidates: [],
@@ -27,6 +58,9 @@ Alpine.data('apuracao', () => ({
   /** Votos já lidos, somados página a página. As páginas chegam uma vez só e
    *  em ordem fixa, então dá para acumular direto em vez de guardar cada uma. */
   alvo: {},
+  /** Votos do tally que não são de candidato (branco, nulo). Não entram no
+   *  ranking, mas o `total` do backend os conta — então entram na soma. */
+  alvoOutros: 0,
   alvoTotal: 0,
 
   /** Página sendo lida agora. */
@@ -37,6 +71,7 @@ Alpine.data('apuracao', () => ({
 
   /** Números na tela, correndo atrás do alvo. */
   counted: {},
+  contadoOutros: 0,
 
   status: 'ocioso', // ocioso | carregando | cadastrado | apurando | erro
   erro: '',
@@ -61,7 +96,11 @@ Alpine.data('apuracao', () => ({
       const cadastro = await fetchCandidates()
       // A cor acompanha o candidato desde o cadastro, então não muda quando o
       // ranking se reorganiza.
-      this.candidates = cadastro.map((c, i) => ({ ...c, cor: CORES[i % CORES.length] }))
+      this.candidates = cadastro.map((c) => ({
+        ...c,
+        ...coresDoCandidato(c.number),
+        ...separarPartido(c.party),
+      }))
       this.zerar()
       this.status = 'cadastrado'
     } catch (e) {
@@ -84,7 +123,9 @@ Alpine.data('apuracao', () => ({
     this.pagina = 1
     this.totalPaginas = 1
     this.totalGeral = 0
+    this.alvoOutros = 0
     this.alvoTotal = 0
+    this.contadoOutros = 0
     this.tentativas = 0
     this.completo = false
     this.erro = ''
@@ -103,10 +144,9 @@ Alpine.data('apuracao', () => ({
       const p = await fetchPollReportPage(this.pagina)
 
       for (const [numero, votos] of Object.entries(p.tally)) {
-        if (numero in this.alvo) {
-          this.alvo[numero] += votos
-          this.alvoTotal += votos
-        }
+        if (numero in this.alvo) this.alvo[numero] += votos
+        else this.alvoOutros += votos
+        this.alvoTotal += votos
       }
       this.totalPaginas = p.totalPaginas
       this.totalGeral = p.total
@@ -159,6 +199,11 @@ Alpine.data('apuracao', () => ({
       const salto = Math.max(1, Math.ceil(Math.abs(diferenca) * SUAVIZACAO))
       this.counted[numero] = atual + Math.sign(diferenca) * Math.min(salto, Math.abs(diferenca))
     }
+    if (this.contadoOutros !== this.alvoOutros) {
+      const diferenca = this.alvoOutros - this.contadoOutros
+      const salto = Math.max(1, Math.ceil(Math.abs(diferenca) * SUAVIZACAO))
+      this.contadoOutros += Math.sign(diferenca) * Math.min(salto, Math.abs(diferenca))
+    }
     // Nada mais a animar: nem página por vir, nem número por alcançar.
     if (!this.contando && (this.completo || this.travado)) {
       clearInterval(this.timerAnim)
@@ -166,8 +211,10 @@ Alpine.data('apuracao', () => ({
     }
   },
 
+  /** Tudo que já está na tela, brancos e nulos incluídos — é com isto que o
+   *  total do backend tem que fechar. */
   get apurados() {
-    return Object.values(this.counted).reduce((soma, n) => soma + n, 0)
+    return Object.values(this.counted).reduce((soma, n) => soma + n, 0) + this.contadoOutros
   },
 
   /** True enquanto os números na tela ainda estão subindo. */
@@ -201,9 +248,56 @@ Alpine.data('apuracao', () => ({
     return [...this.candidates].sort((a, b) => this.counted[b.number] - this.counted[a.number])
   },
 
-  get vencedor() {
-    const lider = this.ranking[0]
-    return lider && this.counted[lider.number] > 0 ? lider : null
+  /**
+   * Posição de cada candidato, por número.
+   *
+   * Os cards são renderizados na ordem fixa do cadastro e deslocados por
+   * `transform`. Como o DOM nunca se reordena, o navegador anima a troca de
+   * posição sozinho — não é preciso mexer em nó nenhum.
+   */
+  get posicoes() {
+    const mapa = {}
+    this.ranking.forEach((c, i) => (mapa[c.number] = i))
+    return mapa
+  },
+
+  posicao(number) {
+    return this.posicoes[number] ?? 0
+  },
+
+  noPodio(number) {
+    return this.posicao(number) < PODIO
+  },
+
+  /** Altura do card do 1º lugar; os menores saem dela pela escala. */
+  get alturaCardPodio() {
+    return ALTURA_PODIO
+  },
+
+  /** Deslocamento e escala de um card do pódio. O 1º fica inteiro no topo; os
+   *  seguintes empilham já reduzidos, então a conta usa a altura escalada. */
+  deslocamentoPodio(number) {
+    const posicao = this.posicao(number)
+    const menor = ALTURA_PODIO * ESCALA_PODIO
+    const y = posicao === 0 ? 0 : ALTURA_PODIO + GAP + (posicao - 1) * (menor + GAP)
+    return `translateY(${y}px) scale(${posicao === 0 ? 1 : ESCALA_PODIO})`
+  },
+
+  /** Deslocamento horizontal de um card da fileira. */
+  deslocamentoFileira(number) {
+    return `translateX(${Math.max(0, this.posicao(number) - PODIO) * PASSO_FILEIRA}px)`
+  },
+
+  /** Alturas e larguras dos contêineres absolutos, em px. */
+  get alturaPodio() {
+    const quantos = Math.min(PODIO, this.candidates.length)
+    if (!quantos) return 0
+    return ALTURA_PODIO + (quantos - 1) * (ALTURA_PODIO * ESCALA_PODIO + GAP)
+  },
+
+  get larguraFileira() {
+    const quantos = Math.max(0, this.candidates.length - PODIO)
+    return quantos ? quantos * PASSO_FILEIRA - GAP : 0
   },
 
   percentual(number) {

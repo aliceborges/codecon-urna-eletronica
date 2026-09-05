@@ -3,43 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Apuração</title>
+    <title>Eleições Codecon</title>
     <link rel="icon" href="data:," />
     <script type="module" src="/src/main.js"></script>
   </head>
 
-  <body class="bg-noite text-gelo">
-    <div x-data="apuracao" x-cloak class="mx-auto flex min-h-dvh max-w-3xl flex-col gap-8 px-6 py-10">
-      <header class="flex items-end justify-between gap-4">
-        <div>
-          <h1 class="text-3xl font-semibold tracking-tight">Apuração</h1>
-          <p class="mt-1 text-sm text-gelo/50" x-show="temCadastro">
-            <span x-text="formata(apurados)"></span> votos
-          </p>
-        </div>
+  <body class="bg-carvao text-gelo">
+    <div x-data="apuracao" x-cloak class="mx-auto flex min-h-dvh max-w-5xl flex-col gap-6 px-6 py-8">
+      <header class="text-center">
+        <h1 class="text-3xl font-semibold uppercase tracking-[0.2em]">Eleições Codecon</h1>
 
-        <!-- Cadastro carregado, esperando o operador mandar contar -->
-        <button
-          x-show="status === 'cadastrado'"
-          @click="iniciar"
-          class="rounded-lg bg-limao px-5 py-2.5 text-sm font-medium text-noite transition hover:brightness-110"
-        >
-          Iniciar apuração
-        </button>
+        <div class="mt-3 flex justify-center">
+          <!-- Cadastro carregado, esperando o operador mandar contar -->
+          <button
+            x-show="status === 'cadastrado'"
+            @click="iniciar"
+            class="rounded-lg bg-limao px-5 py-2.5 text-sm font-medium text-noite transition hover:brightness-110"
+          >
+            Iniciar apuração
+          </button>
 
-        <!-- Indicador ao vivo -->
-        <div x-show="status === 'apurando'" class="flex items-center gap-2 text-xs text-gelo/50">
-          <span class="relative flex size-2">
-            <span
-              class="absolute inline-flex size-full animate-ping rounded-full bg-limao opacity-75"
-              x-show="(lendo || contando) && !travado"
-            ></span>
-            <span
-              class="relative inline-flex size-2 rounded-full"
-              :class="travado ? 'bg-uva' : 'bg-limao'"
-            ></span>
-          </span>
-          <span x-text="situacao"></span>
+          <!-- Indicador ao vivo -->
+          <div x-show="status === 'apurando'" class="flex items-center gap-2 text-xs text-gelo/50">
+            <span class="relative flex size-2">
+              <span
+                class="absolute inline-flex size-full animate-ping rounded-full bg-limao opacity-75"
+                x-show="(lendo || contando) && !travado"
+              ></span>
+              <span
+                class="relative inline-flex size-2 rounded-full"
+                :class="travado ? 'bg-uva' : 'bg-limao'"
+              ></span>
+            </span>
+            <span x-text="situacao"></span>
+            <span>·</span>
+            <span><span x-text="formata(apurados)"></span> votos</span>
+            <span x-show="contadoOutros">
+              · <span x-text="formata(contadoOutros)"></span>
+              <span x-text="contadoOutros === 1 ? 'branco/nulo' : 'brancos e nulos'"></span>
+            </span>
+          </div>
         </div>
       </header>
 
@@ -61,12 +64,12 @@
 
       <!-- Primeira carga -->
       <template x-if="status === 'carregando'">
-        <p class="text-sm text-gelo/50">Carregando apuração…</p>
+        <p class="text-center text-sm text-gelo/50">Carregando candidatos…</p>
       </template>
 
       <!-- Falha antes de ter qualquer dado na tela -->
       <template x-if="status === 'erro'">
-        <div class="rounded-xl border border-uva/40 bg-uva/10 p-6">
+        <div class="rounded-xl border border-uva/40 bg-uva/10 p-6 text-center">
           <p class="font-medium">Não foi possível carregar a apuração</p>
           <p class="mt-1 text-sm text-gelo/50" x-text="erro"></p>
           <button
@@ -85,7 +88,7 @@
             x-show="erro"
             class="flex items-center justify-between gap-4 rounded-lg border border-uva/40 bg-uva/10 px-4 py-3 text-xs text-gelo/70"
           >
-            <p x-show="!travado">
+            <p x-show="!travado" class="fixed">
               Falha ao ler a página <span x-text="pagina"></span>
               (<span x-text="erro"></span>). Tentando de novo…
             </p>
@@ -111,7 +114,7 @@
           </div>
 
           <!-- Progresso rumo ao total geral declarado pelo backend -->
-          <div class="h-1.5 overflow-hidden rounded-full bg-carvao">
+          <div class="h-1.5 overflow-hidden rounded-full bg-noite">
             <div
               class="h-full rounded-full bg-limao transition-[width] duration-100 ease-linear"
               :style="`width: ${progresso}%`"
@@ -119,60 +122,116 @@
           </div>
 
           <!-- Ranking ao vivo -->
-          <ul class="flex flex-col gap-3">
-            <template x-for="c in ranking" :key="c.number">
-              <li class="flex items-center gap-4 rounded-xl bg-carvao p-4">
-                <div
-                  class="retrato size-14 shrink-0 rounded-lg"
-                  :style="`background: ${c.cor}`"
-                  x-html="c.photo"
-                ></div>
-
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-baseline gap-2">
-                    <span class="font-mono text-lg font-semibold text-gelo/40" x-text="c.number"></span>
-                    <span class="truncate font-medium" x-text="c.name"></span>
-                    <span class="truncate text-xs text-gelo/40" x-text="c.party"></span>
-                  </div>
-
-                  <div class="mt-2 h-2 overflow-hidden rounded-full bg-noite">
-                    <div
-                      class="h-full rounded-full transition-[width] duration-100 ease-linear"
-                      :style="`width: ${percentual(c.number)}%; background: ${c.cor}`"
-                    ></div>
-                  </div>
-                </div>
-
-                <div class="shrink-0 text-right">
-                  <p class="text-2xl font-semibold tabular-nums" x-text="formata(counted[c.number])"></p>
-                  <p class="text-xs tabular-nums text-gelo/50" x-text="percentual(c.number).toFixed(1) + '%'"></p>
-                </div>
-              </li>
-            </template>
-          </ul>
-
-          <!-- Eleito: última página lida e números já na posição final. -->
-          <template x-if="encerrada && vencedor">
-            <div
-              x-transition.duration.500ms
-              class="mt-auto flex items-center gap-5 rounded-2xl border border-limao/40 bg-limao/10 p-6"
-            >
+          <!-- Pódio: os três primeiros, empilhados. Os cards são renderizados
+               na ordem do cadastro e posicionados por transform, então trocar
+               de posição é só uma transição de CSS. -->
+          <div class="relative mx-auto w-full max-w-xl" :style="`height: ${alturaPodio}px`">
+            <template x-for="c in candidates" :key="c.number">
               <div
-                class="retrato size-20 shrink-0 rounded-xl"
-                :style="`background: ${vencedor.cor}`"
-                x-html="vencedor.photo"
-              ></div>
-              <div>
-                <p class="text-xs font-medium uppercase tracking-widest text-limao">Eleito</p>
-                <p class="mt-1 text-2xl font-semibold" x-text="vencedor.name"></p>
-                <p class="text-sm text-gelo/50">
-                  <span x-text="vencedor.party"></span> ·
-                  <span x-text="formata(counted[vencedor.number])"></span> votos
-                  (<span x-text="percentual(vencedor.number).toFixed(1)"></span>%)
-                </p>
+                class="absolute inset-x-0 top-0 flex origin-top items-center gap-5 rounded-xl p-3 transition-[transform,opacity,box-shadow] duration-500 ease-out"
+                :class="{
+                  'opacity-100': noPodio(c.number),
+                  'pointer-events-none opacity-0': !noPodio(c.number),
+                  'ring-2 ring-limao': encerrada && posicao(c.number) === 0,
+                }"
+                :style="`height: ${alturaCardPodio}px; transform: ${deslocamentoPodio(c.number)};
+                         background: ${c.cor}; color: ${c.corTexto}`"
+              >
+                <span
+                  class="w-8 shrink-0 text-center font-mono text-4xl font-semibold opacity-30"
+                  x-text="posicao(c.number) + 1"
+                ></span>
+
+                <!-- Card branco: fotos e nomes -->
+                <div class="flex shrink-0 gap-2 rounded-lg bg-white p-3 text-noite">
+                  <div class="w-28 shrink-0">
+                    <div class="flex h-28 items-end">
+                      <div class="retrato size-28 rounded-lg ring-1 ring-noite/10" x-html="c.photo"></div>
+                    </div>
+                    <p class="mt-2 line-clamp-2 h-11 text-base font-medium leading-tight" x-text="c.name"></p>
+                  </div>
+                  <div x-show="c.photo_vice" class="w-20 shrink-0">
+                    <div class="flex h-28 items-end">
+                      <div class="retrato size-20 rounded-lg ring-1 ring-noite/10" x-html="c.photo_vice"></div>
+                    </div>
+                    <p class="mt-2 line-clamp-2 h-11 text-sm leading-tight text-noite/50" x-text="c.name_vice"></p>
+                  </div>
+                </div>
+
+                <!-- Partido e número -->
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="shrink-0 rounded-md px-2 py-0.5 text-sm font-semibold text-gelo"
+                      :style="`background: ${c.corChip}`"
+                      x-text="c.sigla"
+                    ></span>
+                    <span class="font-mono text-4xl font-semibold leading-none" x-text="c.number"></span>
+                  </div>
+                  <p class="mt-2 line-clamp-2 text-sm leading-tight opacity-70" x-text="c.partidoNome"></p>
+                </div>
+
+                <!-- Votos -->
+                <div class="shrink-0 pr-2 text-right">
+                  <p class="text-5xl font-semibold tabular-nums" x-text="formata(counted[c.number])"></p>
+                  <p class="text-sm tabular-nums opacity-70" x-text="percentual(c.number).toFixed(1) + '%'"></p>
+                </div>
               </div>
-            </div>
-          </template>
+            </template>
+          </div>
+
+          <!-- Demais: cards menores, todos numa linha só -->
+          <div
+            class="relative mx-auto h-56"
+            :style="`width: ${larguraFileira}px`"
+          >
+            <template x-for="c in candidates" :key="'menor-' + c.number">
+              <div
+                class="absolute left-0 top-0 flex w-42 flex-col rounded-xl p-3 transition-[transform,opacity] duration-500 ease-out"
+                :class="!noPodio(c.number) ? 'opacity-100' : 'pointer-events-none opacity-0'"
+                :style="`transform: ${deslocamentoFileira(c.number)}; background: ${c.cor}; color: ${c.corTexto}`"
+              >
+                <div class="flex min-h-8 items-start gap-2">
+                  <span
+                    class="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-gelo"
+                    :style="`background: ${c.corChip}`"
+                    x-text="c.sigla"
+                  ></span>
+                  <span
+                    class="line-clamp-2 min-w-0 flex-1 text-[10px] leading-tight opacity-70"
+                    x-text="c.partidoNome"
+                  ></span>
+                  <span class="shrink-0 font-mono text-sm font-semibold leading-none" x-text="c.number"></span>
+                </div>
+
+                <div class="mt-2 flex-1 rounded-lg bg-white p-2 text-noite">
+                  <div class="flex gap-2">
+                    <div class="w-16 shrink-0">
+                      <div class="flex h-16 items-end">
+                        <div class="retrato size-16 rounded-md ring-1 ring-noite/10" x-html="c.photo"></div>
+                      </div>
+                      <p class="mt-1.5 line-clamp-2 h-7 text-[11px] font-medium leading-tight" x-text="c.name"></p>
+                    </div>
+                    <div x-show="c.photo_vice" class="w-12 shrink-0">
+                      <div class="flex h-16 items-end">
+                        <div class="retrato size-12 rounded-md ring-1 ring-noite/10" x-html="c.photo_vice"></div>
+                      </div>
+                      <p class="mt-1.5 line-clamp-2 h-7 text-[9px] leading-tight text-noite/50" x-text="c.name_vice"></p>
+                    </div>
+                  </div>
+
+                  <p class="mt-1.5 flex items-baseline gap-1.5">
+                    <span class="text-lg font-semibold tabular-nums" x-text="formata(counted[c.number])"></span>
+                    <span
+                      class="text-[10px] tabular-nums text-noite/50"
+                      x-text="percentual(c.number).toFixed(1) + '%'"
+                    ></span>
+                  </p>
+                </div>
+              </div>
+            </template>
+          </div>
+
         </div>
       </template>
     </div>
