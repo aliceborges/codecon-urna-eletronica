@@ -16,7 +16,18 @@ function prepararProximoEleitor() {
 <template>
   <main class="estrutura-pagina pagina-sucesso">
     <section class="urna-eletronica urna-sucesso" aria-labelledby="titulo-sucesso">
-      <CabecalhoUrna titulo="Urna eletrônica" />
+      <CabecalhoUrna titulo="Urna eletrônica">
+        <template #acao>
+          <button
+            class="botao-exportar-cabecalho"
+            type="button"
+            @click="roteador.push({ name: 'exportacao' })"
+          >
+            <span class="indicador-status" aria-hidden="true"></span>
+            Exportar boletim
+          </button>
+        </template>
+      </CabecalhoUrna>
       <ConfirmacaoVoto
         :tipo-voto="ultimoTipoVoto"
         @proximo-eleitor="prepararProximoEleitor"

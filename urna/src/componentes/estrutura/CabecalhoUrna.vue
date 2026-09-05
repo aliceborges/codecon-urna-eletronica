@@ -17,9 +17,11 @@ withDefaults(
       <strong>{{ titulo }}</strong>
     </div>
 
-    <div class="status-terminal">
-      <span class="indicador-status" aria-hidden="true"></span>
-      {{ status }}
-    </div>
+    <slot name="acao">
+      <div class="status-terminal">
+        <span class="indicador-status" aria-hidden="true"></span>
+        {{ status }}
+      </div>
+    </slot>
   </header>
 </template>

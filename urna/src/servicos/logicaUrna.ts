@@ -1,4 +1,10 @@
-import type { Candidato, CandidatoExterno, LogicaUrnaExterna } from '../tipos/urna'
+import type {
+  Candidato,
+  CandidatoExterno,
+  EnvelopeBoletimVotacao,
+  LogicaUrnaExterna,
+  ResultadoExportacaoVotacao,
+} from '../tipos/urna'
 
 function obterLogicaExterna(): LogicaUrnaExterna {
   if (!window.UrnaFrontendLogic) {
@@ -41,6 +47,15 @@ export function confirmarVotoBranco() {
   return obterLogicaExterna().confirmVote('blank')
 }
 
+export function obterApuracaoLocal() {
+  const contagem = obterLogicaExterna().getTally()
+
+  return {
+    contagem,
+    total: Object.values(contagem).reduce((soma, votos) => soma + votos, 0),
+  }
+}
+
 export async function importarCandidatosCriptografados(carga: string, hashEsperado: string) {
   const resultado = await obterLogicaExterna().importEncryptedCandidates(carga, hashEsperado)
   return {
@@ -55,6 +70,35 @@ export function urnaEstaConfigurada() {
     return obterCandidatos().length > 0
   } catch {
     return false
+  }
+}
+
+export async function exportarBoletimVotacao(
+  identificadorTerminal: string,
+): Promise<ResultadoExportacaoVotacao> {
+  const terminal = identificadorTerminal.trim()
+
+  if (!terminal) throw new Error('Informe o identificador do terminal.')
+
+  return obterLogicaExterna().exportPollReport(terminal)
+}
+
+export function criarArquivoBoletim(resultado: ResultadoExportacaoVotacao) {
+  const envelope: EnvelopeBoletimVotacao = {
+    encrypted: resultado.encrypted,
+    hash: resultado.hash,
+  }
+  const identificadorSeguro = resultado.report.terminal_id
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z\d_-]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase()
+  const data = resultado.report.issued_at.slice(0, 10)
+
+  return {
+    conteudo: JSON.stringify(envelope, null, 2),
+    nome: `boletim-${identificadorSeguro || 'urna'}-${data}.json`,
   }
 }
 

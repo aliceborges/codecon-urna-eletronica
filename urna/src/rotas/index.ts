@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import { urnaEstaConfigurada } from '../servicos/logicaUrna'
 import { reiniciarSessaoVotacao, votacaoConcluida } from '../estado/sessaoVotacao'
 import PaginaConfiguracao from '../paginas/PaginaConfiguracao.vue'
+import PaginaExportacao from '../paginas/PaginaExportacao.vue'
 import PaginaSucesso from '../paginas/PaginaSucesso.vue'
 import PaginaVotacao from '../paginas/PaginaVotacao.vue'
 
@@ -22,6 +23,11 @@ const roteador = createRouter({
       path: '/sucesso',
       name: 'sucesso',
       component: PaginaSucesso,
+    },
+    {
+      path: '/exportacao',
+      name: 'exportacao',
+      component: PaginaExportacao,
     },
     {
       path: '/:pathMatch(.*)*',
