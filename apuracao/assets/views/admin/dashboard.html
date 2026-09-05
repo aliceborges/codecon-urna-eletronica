@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}
+{% block title %}Painel{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Painel da apuração</h1>
+</div>
+
+<div class="cards">
+  <a class="stat" href="/admin/candidatos" style="text-decoration:none;color:inherit">
+    <div class="n">{{ total_candidatos }}</div>
+    <div class="l">Candidatos cadastrados</div>
+  </a>
+  <a class="stat" href="/admin/urnas" style="text-decoration:none;color:inherit">
+    <div class="n">{{ total_urnas }}</div>
+    <div class="l">Urnas cadastradas</div>
+  </a>
+</div>
+
+<div class="card">
+  <p class="muted" style="margin-top:0">
+    Cadastre os <strong>candidatos</strong> (com titular e vice) e as <strong>urnas</strong>
+    (nome/local + chave pública). Nas próximas fases isso alimenta o
+    <code>candidates.json</code> criptografado enviado a cada urna.
+  </p>
+  <div class="actions">
+    <a class="btn" href="/admin/candidatos/novo">+ Novo candidato</a>
+    <a class="btn ghost" href="/admin/urnas/nova">+ Nova urna</a>
+  </div>
+</div>
+{% endblock %}
