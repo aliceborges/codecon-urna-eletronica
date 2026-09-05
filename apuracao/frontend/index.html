@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apuração</title>
+    <link rel="icon" href="data:," />
+    <script type="module" src="/src/main.js"></script>
+  </head>
+
+  <body class="bg-noite text-gelo">
+    <div x-data="apuracao" x-cloak class="mx-auto flex min-h-dvh max-w-3xl flex-col gap-8 px-6 py-10">
+      <header class="flex items-end justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-semibold tracking-tight">Apuração</h1>
+          <p class="mt-1 text-sm text-gelo/50" x-show="status === 'pronto'">
+            <span x-text="formata(apurados)"></span> votos
+          </p>
+        </div>
+
+        <!-- Indicador ao vivo -->
+        <div x-show="status === 'pronto'" class="flex items-center gap-2 text-xs text-gelo/50">
+          <span class="relative flex size-2">
+            <span
+              class="absolute inline-flex size-full animate-ping rounded-full bg-limao opacity-75"
+              x-show="(lendo || contando) && !travado"
+            ></span>
+            <span
+              class="relative inline-flex size-2 rounded-full"
+              :class="travado ? 'bg-uva' : 'bg-limao'"
+            ></span>
+          </span>
+          <span x-text="situacao"></span>
+        </div>
+      </header>
+
+      <!-- Primeira carga -->
+      <template x-if="status === 'carregando'">
+        <p class="text-sm text-gelo/50">Carregando apuração…</p>
+      </template>
+
+      <!-- Falha antes de ter qualquer dado na tela -->
+      <template x-if="status === 'erro'">
+        <div class="rounded-xl border border-uva/40 bg-uva/10 p-6">
+          <p class="font-medium">Não foi possível carregar a apuração</p>
+          <p class="mt-1 text-sm text-gelo/50" x-text="erro"></p>
+          <button
+            @click="iniciar"
+            class="mt-4 rounded-lg bg-limao px-4 py-2 text-sm font-medium text-noite transition hover:brightness-110"
+          >
+            Tentar de novo
+          </button>
+        </div>
+      </template>
+
+      <template x-if="status === 'pronto'">
+        <div class="contents">
+          <!-- Leitura falhou, mas já há resultado na tela: avisa sem apagar nada -->
+          <div
+            x-show="erro"
+            class="flex items-center justify-between gap-4 rounded-lg border border-uva/40 bg-uva/10 px-4 py-3 text-xs text-gelo/70"
+          >
+            <p x-show="!travado">
+              Falha ao ler a página <span x-text="pagina"></span>
+              (<span x-text="erro"></span>). Tentando de novo…
+            </p>
+            <p x-show="travado">
+              Parou na página <span x-text="pagina"></span> de <span x-text="totalPaginas"></span>
+              (<span x-text="erro"></span>). O total abaixo está incompleto.
+            </p>
+            <button
+              x-show="travado"
+              @click="retomar"
+              class="shrink-0 rounded-md bg-limao px-3 py-1.5 font-medium text-noite transition hover:brightness-110"
+            >
+              Retomar
+            </button>
+          </div>
+
+          <div
+            x-show="divergencia"
+            class="rounded-lg border border-uva/40 bg-uva/10 px-4 py-3 text-xs text-gelo/70"
+          >
+            A soma das páginas (<span x-text="formata(alvoTotal)"></span>) não bate com o
+            total informado pelo backend (<span x-text="formata(totalGeral)"></span>).
+          </div>
+
+          <!-- Progresso rumo ao total geral declarado pelo backend -->
+          <div class="h-1.5 overflow-hidden rounded-full bg-carvao">
+            <div
+              class="h-full rounded-full bg-limao transition-[width] duration-100 ease-linear"
+              :style="`width: ${progresso}%`"
+            ></div>
+          </div>
+
+          <!-- Ranking ao vivo -->
+          <ul class="flex flex-col gap-3">
+            <template x-for="c in ranking" :key="c.number">
+              <li class="flex items-center gap-4 rounded-xl bg-carvao p-4">
+                <div
+                  class="size-14 shrink-0 overflow-hidden rounded-lg [&_svg]:size-full"
+                  :style="`background: ${cor(c.number)}`"
+                  x-html="c.photo"
+                ></div>
+
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-baseline gap-2">
+                    <span class="font-mono text-lg font-semibold text-gelo/40" x-text="c.number"></span>
+                    <span class="truncate font-medium" x-text="c.name"></span>
+                    <span class="truncate text-xs text-gelo/40" x-text="c.party"></span>
+                  </div>
+
+                  <div class="mt-2 h-2 overflow-hidden rounded-full bg-noite">
+                    <div
+                      class="h-full rounded-full transition-[width] duration-100 ease-linear"
+                      :style="`width: ${percentual(c.number)}%; background: ${cor(c.number)}`"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="shrink-0 text-right">
+                  <p class="text-2xl font-semibold tabular-nums" x-text="formata(counted[c.number])"></p>
+                  <p class="text-xs tabular-nums text-gelo/50" x-text="percentual(c.number).toFixed(1) + '%'"></p>
+                </div>
+              </li>
+            </template>
+          </ul>
+
+          <!-- Eleito: última página lida e números já na posição final. -->
+          <template x-if="encerrada && vencedor">
+            <div
+              x-transition.duration.500ms
+              class="mt-auto flex items-center gap-5 rounded-2xl border border-limao/40 bg-limao/10 p-6"
+            >
+              <div
+                class="size-20 shrink-0 overflow-hidden rounded-xl [&_svg]:size-full"
+                :style="`background: ${cor(vencedor.number)}`"
+                x-html="vencedor.photo"
+              ></div>
+              <div>
+                <p class="text-xs font-medium uppercase tracking-widest text-limao">Eleito</p>
+                <p class="mt-1 text-2xl font-semibold" x-text="vencedor.name"></p>
+                <p class="text-sm text-gelo/50">
+                  <span x-text="vencedor.party"></span> ·
+                  <span x-text="formata(counted[vencedor.number])"></span> votos
+                  (<span x-text="percentual(vencedor.number).toFixed(1)"></span>%)
+                </p>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+  </body>
+</html>

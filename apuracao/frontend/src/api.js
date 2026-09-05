@@ -1,0 +1,68 @@
+/** Backend da apuração. Sobrescreva com VITE_API_URL no .env. */
+const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+
+/** Trava de segurança: impede laço infinito se `total_pages` vier errado. */
+const MAX_PAGINAS = 500
+
+/** Usada quando o cadastro vem sem `photo`. Fotos reais são SVG inline. */
+const SILHUETA = `
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="78" r="38" fill="var(--color-noite)"/>
+    <path d="M30 200c0-38 31-62 70-62s70 24 70 62z" fill="var(--color-noite)"/>
+  </svg>`
+
+async function getJSON(url) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`O backend respondeu ${res.status}`)
+  return res.json()
+}
+
+/** A lista pode vir em `items`, `data`, `results`… ou ser o próprio corpo. */
+function extrairLista(body) {
+  return body?.items ?? body?.data ?? body?.results ?? (Array.isArray(body) ? body : null)
+}
+
+/**
+ * Busca o cadastro de candidatos no setup.
+ *
+ * O setup devolve só a lista, mas o envelope `{ candidates: [...] }` do
+ * contrato antigo também é aceito.
+ */
+export async function fetchCandidates() {
+  const body = await getJSON(`${BASE}/candidates.json`)
+  const lista = extrairLista(body) ?? body?.candidates
+  if (!Array.isArray(lista)) throw new Error('Resposta sem a lista de candidatos')
+
+  return lista.map((c) => ({ ...c, number: String(c.number), photo: c.photo || SILHUETA }))
+}
+
+/**
+ * Lê UMA página da apuração. A tela chama isto em sequência e se atualiza a
+ * cada resposta, em vez de esperar tudo terminar.
+ *
+ * Cada página é um `poll_report` único (não uma lista): de página para página
+ * mudam só o `tally` — o pedaço dos votos daquela página — e o número da
+ * página. `total` é o total geral da apuração e vem igual em todas.
+ *
+ * A votação já está encerrada e a ordem das páginas não muda: o conjunto é
+ * fixo do começo ao fim, cada página é lida uma vez, e a última encerra.
+ */
+export async function fetchPollReportPage(page) {
+  const body = await getJSON(`${BASE}/poll_report?page=${page}`)
+  if (!body?.tally || typeof body.tally !== 'object') {
+    throw new Error('Resposta sem o tally da página')
+  }
+
+  const tally = {}
+  for (const [numero, votos] of Object.entries(body.tally)) {
+    tally[String(numero)] = Number(votos) || 0
+  }
+
+  return {
+    page: Number(body.page) || page,
+    totalPaginas: Math.max(1, Number(body.total_pages) || 1),
+    /** Total geral da apuração — o mesmo em todas as páginas. */
+    total: Number(body.total) || 0,
+    tally,
+  }
+}

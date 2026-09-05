@@ -1,0 +1,17 @@
+@import 'tailwindcss';
+
+/* Paleta do tema — fonte única das cores. Gera as utilitárias do Tailwind
+   (bg-noite, text-gelo, border-limao…) e fica disponível como var(--color-*)
+   para SVG inline e estilos calculados no JS. */
+@theme {
+  --color-noite: #0e1014;
+  --color-carvao: #22262c;
+  --color-limao: #b1ff37;
+  --color-uva: #8552e9;
+  --color-gelo: #d9d9d9;
+  --color-eletrico: #273aff;
+}
+
+[x-cloak] {
+  display: none !important;
+}
